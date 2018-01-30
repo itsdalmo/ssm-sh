@@ -1,5 +1,7 @@
 ## SSM shell
 
+[![Build Status](https://travis-ci.org/itsdalmo/ssm-sh.svg?branch=master)](https://travis-ci.org/itsdalmo/ssm-sh)
+
 Little experiment to mimic SSH by using SSM agent to send commands to
 remote instances and fetching the output.
 
