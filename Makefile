@@ -1,7 +1,5 @@
 BINARY_NAME=ssm-sh
 TARGET ?= darwin
-BINARY_LINUX=$(BINARY_NAME)-linux-amd64
-BINARY_DARWIN=$(BINARY_NAME)-darwin-amd64
 DOCKER_REPO=itsdalmo/ssm-sh
 
 default: test
@@ -26,7 +24,7 @@ clean:
 
 run-docker:
 	@echo "== Docker run =="
-	docker run --rm itsdalmo/ssm-sh:latest
+	docker run --rm $(DOCKER_REPO):latest
 
 build-docker:
 	@echo "== Docker build =="
