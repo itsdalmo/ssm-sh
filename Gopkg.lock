@@ -53,12 +53,6 @@
   version = "v1.32.0"
 
 [[projects]]
-  name = "github.com/inconshreveable/mousetrap"
-  packages = ["."]
-  revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
-  version = "v1.0"
-
-[[projects]]
   name = "github.com/jessevdk/go-flags"
   packages = ["."]
   revision = "96dc06278ce32a0e9d957d590bb987c81ee66407"
@@ -82,18 +76,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  name = "github.com/spf13/cobra"
-  packages = ["."]
-  revision = "7b2c5ac9fc04fc5efafb60700713d4fa609b777b"
-  version = "v0.0.1"
-
-[[projects]]
-  name = "github.com/spf13/pflag"
-  packages = ["."]
-  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
-  version = "v1.0.0"
-
-[[projects]]
   name = "github.com/stretchr/testify"
   packages = ["assert"]
   revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
@@ -102,6 +84,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4b46a9b3a6b1d800e41a23478a044aa717e9fb8e6a1117c43fa890a1fb8c7474"
+  inputs-digest = "3ffda370f3971f5a9195d9c9af4e25dbca2edccb31d8f7526f0e0b49350a931c"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -24,6 +24,7 @@ type Manager struct {
 	PollTimeout   int
 }
 
+// The return type transmitted over a channel when fetching output.
 type Output struct {
 	InstanceId string
 	Status     string
@@ -31,6 +32,7 @@ type Output struct {
 	Error      error
 }
 
+// Create a new manager.
 func NewManager(sess *session.Session, region string, frequency int, timeout int) *Manager {
 	return &Manager{
 		SSM:           ssm.New(sess, &aws.Config{Region: aws.String(region)}),
@@ -41,6 +43,7 @@ func NewManager(sess *session.Session, region string, frequency int, timeout int
 	}
 }
 
+// Fetch a list of instances managed by SSM. Paginates until all responses have been collected.
 func (self *Manager) GetInstances(limit int) ([]*ssm.InstanceInformation, error) {
 	if min := 5; min > limit {
 		limit = min
@@ -49,7 +52,6 @@ func (self *Manager) GetInstances(limit int) ([]*ssm.InstanceInformation, error)
 		MaxResults: aws.Int64(int64(limit)),
 	}
 
-	// Paginate and add instances to a flat slice.
 	var out []*ssm.InstanceInformation
 	for {
 		response, err := self.SSM.DescribeInstanceInformation(input)
@@ -67,6 +69,8 @@ func (self *Manager) GetInstances(limit int) ([]*ssm.InstanceInformation, error)
 	return out, nil
 }
 
+// Lists all instances and writes the tabulated output to
+// the given interface.
 func (self *Manager) List(out io.Writer, limit int) error {
 	// Get all instances
 	instances, err := self.GetInstances(limit)
@@ -106,6 +110,7 @@ func (self *Manager) List(out io.Writer, limit int) error {
 	return nil
 }
 
+// Run command on the given instance ids.
 func (self *Manager) Run(targets []string, command string) (string, error) {
 	input := &ssm.SendCommandInput{
 		InstanceIds:  aws.StringSlice(targets),
@@ -122,10 +127,11 @@ func (self *Manager) Run(targets []string, command string) (string, error) {
 	return aws.StringValue(res.Command.CommandId), nil
 }
 
-func (self *Manager) Abort(targets []string, id string) error {
+// Abort command on the given instance ids.
+func (self *Manager) Abort(instanceIds []string, commandId string) error {
 	_, err := self.SSM.CancelCommand(&ssm.CancelCommandInput{
-		CommandId:   aws.String(id),
-		InstanceIds: aws.StringSlice(targets),
+		CommandId:   aws.String(commandId),
+		InstanceIds: aws.StringSlice(instanceIds),
 	})
 	if err != nil {
 		return err
@@ -133,53 +139,80 @@ func (self *Manager) Abort(targets []string, id string) error {
 	return nil
 }
 
-func (self *Manager) Output(targets []string, id string, output chan Output) {
+// Output fetches standard output (or standard error) depending on the status
+// for the given command. The results are sent over a channel, which is closed
+// when all output has been fetched, or the timeout limit has been reached.
+func (self *Manager) Output(instanceIds []string, commandId string, output chan Output) {
 	defer close(output)
 	var wg sync.WaitGroup
-	for _, target := range targets {
+	for _, instanceId := range instanceIds {
 		wg.Add(1)
-		go self.getInstanceOutput(target, id, output, &wg)
+		go self.getInstanceOutput(instanceId, commandId, output, &wg)
 	}
 	wg.Wait()
 	return
 }
 
-func (self *Manager) getInstanceOutput(target string, id string, output chan Output, wg *sync.WaitGroup) {
+// Fetch output from a command invocation on an instance.
+func (self *Manager) getInstanceOutput(instanceId string, commandId string, output chan Output, wg *sync.WaitGroup) {
 	defer wg.Done()
 	retry := time.NewTicker(time.Millisecond * time.Duration(self.PollFrequency))
 	limit := time.NewTimer(time.Second * time.Duration(self.PollTimeout))
 
+	o := Output{
+		InstanceId: instanceId,
+		Status:     "",
+		Output:     "",
+		Error:      nil,
+	}
+
 	for {
 		select {
 		case <-limit.C:
-			output <- Output{target, "", "", errors.New("Timeout reached when awaiting output.")}
+			o.Error = errors.New("Timeout reached when awaiting output.")
+			output <- o
 			return
 		case <-retry.C:
-			out, err := self.SSM.GetCommandInvocation(&ssm.GetCommandInvocationInput{
-				CommandId:  aws.String(id),
-				InstanceId: aws.String(target),
+			result, err := self.SSM.GetCommandInvocation(&ssm.GetCommandInvocationInput{
+				CommandId:  aws.String(commandId),
+				InstanceId: aws.String(instanceId),
 			})
 			if err != nil {
-				output <- Output{target, "", "", err}
+				o.Error = err
+				output <- o
 				return
 			}
-
-			switch status := aws.StringValue(out.StatusDetails); status {
-			case "Success":
-				output <- Output{target, status, aws.StringValue(out.StandardOutputContent), nil}
-				return
-			case "Failed":
-				output <- Output{target, status, aws.StringValue(out.StandardErrorContent), nil}
-				return
-			case "Cancelled":
-				output <- Output{target, status, "Command was aborted.", nil}
-				return
-			case "Pending", "InProgress", "Delayed":
-				break
-			default:
-				output <- Output{target, status, "", errors.New(fmt.Sprintf("Unrecoverable status: %s", status))}
+			if out, done := processOutput(result); done {
+				output <- out
 				return
 			}
 		}
+	}
+}
+
+// Internal function to process output from GetCommandInvocation.
+func processOutput(input *ssm.GetCommandInvocationOutput) (Output, bool) {
+	out := Output{
+		InstanceId: aws.StringValue(input.InstanceId),
+		Status:     aws.StringValue(input.StatusDetails),
+		Output:     "",
+		Error:      nil,
+	}
+
+	switch out.Status {
+	case "Cancelled":
+		out.Output = "Command was aborted"
+		return out, true
+	case "Success":
+		out.Output = aws.StringValue(input.StandardOutputContent)
+		return out, true
+	case "Failed":
+		out.Output = aws.StringValue(input.StandardErrorContent)
+		return out, true
+	case "Pending", "InProgress", "Delayed":
+		return out, false
+	default:
+		out.Error = errors.New(fmt.Sprintf("Unrecoverable status: %s", out.Status))
+		return out, true
 	}
 }
