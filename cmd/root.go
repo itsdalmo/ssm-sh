@@ -19,8 +19,9 @@ type AwsOptions struct {
 }
 
 type SsmOptions struct {
-	Frequency int `short:"f" long:"frequency" description:"Polling frequency (millseconds to wait between requests)." default:"500"`
-	Timeout   int `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
+	Targets   []string `short:"t" long:"target" description:"One or more instance ids to target," required:"1"`
+	Frequency int      `short:"f" long:"frequency" description:"Polling frequency (millseconds to wait between requests)." default:"500"`
+	Timeout   int      `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
 }
 
 func newSession() (*session.Session, error) {

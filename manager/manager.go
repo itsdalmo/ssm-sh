@@ -161,8 +161,8 @@ func (self *Manager) getInstanceOutput(instanceId string, commandId string, outp
 
 	o := Output{
 		InstanceId: instanceId,
-		Status:     "",
-		Output:     "",
+		Status:     "NA",
+		Output:     "NA",
 		Error:      nil,
 	}
 
