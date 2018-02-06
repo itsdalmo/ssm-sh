@@ -14,35 +14,69 @@ $ go install
 $ ssm-sh --help
 
 Usage:
-  ssm-sh [OPTIONS]
+  ssm-sh [OPTIONS] <list | run | shell>
 
-Application Options:
-  -p, --profile=   AWS Profile to use. (If you are not using Vaulted).
-  -r, --region=    Region to target. (default: eu-west-1)
-  -f, --frequency= Polling frequency (millseconds to wait between requests). (default: 500)
-  -t, --timeout=   Seconds to wait for command result before timing out. (default: 30)
+AWS Options:
+  -p, --profile= AWS Profile to use. (If you are not using Vaulted).
+  -r, --region=  Region to target. (default: eu-west-1)
 
 Help Options:
-  -h, --help       Show this help message
-  ```
+  -h, --help     Show this help message
 
+Available commands:
+  list   List managed instances. (aliases: ls)
+  run    Run a command on the targeted instances.
+  shell  Start an interactive shell. (aliases: sh)
+```
+
+### List usage
+
+```bash
+$ ssm-sh list --help
+
+...
+[list command options]
+      -l, --limit= Limit the number of instances printed (default: 50)
+```
+
+## Run/shell usage
+
+```bash
+$ ssm-sh run --help
+
+...
+[run command options]
+      -t, --target=      One or more instance ids to target
+          --target-file= Path to a file containing a list of targets.
+      -f, --frequency=   Polling frequency (millseconds to wait between requests). (default: 500)
+      -i, --timeout=     Seconds to wait for command result before timing out. (default: 30)
+```
 
 ### Example
 
 ```bash
-$ vaulted -n lab-admin -- ssm-sh
+$ vaulted -n lab-admin -- ssm-sh list
+Instance ID         | Platform     | Version | IP            | Last pinged
+i-03762678c45546813 | Amazon Linux | 2.0     | 172.53.17.163 | 2018-02-06
+i-0d04464ff18b5db7d | Amazon Linux | 2.0     | 172.53.20.172 | 2018-02-06
 
-[INFO] 2018/01/27 16:12:22 AWS credentials loaded
-Instance ID          | Platform             | Version | IP             | Last pinged
-i-02162678c46646813  | Amazon Linux         | 2.0     | 172.32.18.168  | 2018-01-27
-
-$ Chose target (instance id): i-02162678c46646813
-[INFO] 2018/01/27 16:12:57 Targeting: 'i-02162678c46646813'
+$ vaulted -n lab-admin -- ssm-sh shell -t i-03762678c45546813 -t i-0d04464ff18b5db7d
+Initialized with targets: [i-03762678c45546813 i-0d04464ff18b5db7d]
+Type 'exit' to exit. Use ctrl-c to abort running commands.
 
 $ ps aux | grep agent
-root       316  0.0  0.0   9152   920 ?        S    15:13   0:00 grep agent
-root      3261  0.0  1.8 234052 18608 ?        Ssl  12:56   0:02 /usr/bin/amazon-ssm-agent
+i-03762678c45546813 - Success:
+root      3261  0.0  1.9 243560 19668 ?        Ssl  Jan27   4:29 /usr/bin/amazon-ssm-agent
+root      9058  0.0  0.0   9152   936 ?        S    15:02   0:00 grep agent
+
+i-0d04464ff18b5db7d - Success:
+root      3245  0.0  1.9 317292 19876 ?        Ssl  Feb05   0:27 /usr/bin/amazon-ssm-agent
+root      4893  0.0  0.0   9152   924 ?        S    15:02   0:00 grep agent
 
 $ echo $HOSTNAME
-ip-172-32-18-168.eu-west-1.compute.internal
+i-03762678c45546813 - Success:
+ip-172-53-17-163.eu-west-1.compute.internal
+
+i-0d04464ff18b5db7d - Success:
+ip-172-53-20-172.eu-west-1.compute.internal
 ```
