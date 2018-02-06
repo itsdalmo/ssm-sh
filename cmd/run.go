@@ -2,9 +2,9 @@ package command
 
 import (
 	"fmt"
-	"github.com/fatih/color"
 	"github.com/itsdalmo/ssm-sh/manager"
 	"github.com/pkg/errors"
+	"os"
 	"strings"
 )
 
@@ -25,26 +25,22 @@ func (command *RunCommand) Execute(args []string) error {
 		command.SsmOpts.Timeout,
 	)
 
+	targets, err := targetFlagHelper(command.SsmOpts)
+	if err != nil {
+		return errors.Wrap(err, "Failed to set targets")
+	}
+	fmt.Printf("Initialized with targets: %s\n", targets)
+	fmt.Printf("Use ctrl-c to abort the command early.\n\n")
+
 	// Start the command
-	commandId, err := m.Run(command.SsmOpts.Targets, strings.Join(args, " "))
+	commandId, err := m.Run(targets, strings.Join(args, " "))
 	if err != nil {
 		return errors.Wrap(err, "Failed to Run command")
 	}
 
-	// Await output
-	header := color.New(color.Bold)
-	output := make(chan manager.Output)
-	go m.Output(command.SsmOpts.Targets, commandId, output)
-
-	for o := range output {
-		header.Printf("%s - %s:\n", o.InstanceId, o.Status)
-		if o.Error != nil {
-			fmt.Println(o.Error)
-			continue
-		}
-		fmt.Println(o.Output)
-		fmt.Println("")
-	}
+	// Catch sigterms to gracefully shut down
+	abort := interruptHandler()
+	m.Output(os.Stdout, targets, commandId, abort)
 
 	return nil
 }

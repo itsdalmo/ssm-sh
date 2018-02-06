@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager/s3manageriface"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	"github.com/fatih/color"
 	"io"
 	"strings"
 	"sync"
@@ -111,9 +112,9 @@ func (self *Manager) List(out io.Writer, limit int) error {
 }
 
 // Run command on the given instance ids.
-func (self *Manager) Run(targets []string, command string) (string, error) {
+func (self *Manager) Run(instanceIds []string, command string) (string, error) {
 	input := &ssm.SendCommandInput{
-		InstanceIds:  aws.StringSlice(targets),
+		InstanceIds:  aws.StringSlice(instanceIds),
 		DocumentName: aws.String("AWS-RunShellScript"),
 		Comment:      aws.String("Interactive command."),
 		Parameters:   map[string][]*string{"commands": []*string{aws.String(command)}},
@@ -139,22 +140,74 @@ func (self *Manager) Abort(instanceIds []string, commandId string) error {
 	return nil
 }
 
-// Output fetches standard output (or standard error) depending on the status
-// for the given command. The results are sent over a channel, which is closed
-// when all output has been fetched, or the timeout limit has been reached.
-func (self *Manager) Output(instanceIds []string, commandId string, output chan Output) {
-	defer close(output)
-	var wg sync.WaitGroup
-	for _, instanceId := range instanceIds {
-		wg.Add(1)
-		go self.getInstanceOutput(instanceId, commandId, output, &wg)
+// Wrapper for GetOutput which writes the output to the desired io.Writer. Interrupts are handled
+// by calling Abort and waiting for the final output of the command.
+func (self *Manager) Output(w io.Writer, instanceIds []string, commandId string, done <-chan bool) {
+	out := make(chan Output)
+	go self.GetOutput(instanceIds, commandId, out, done)
+
+	header := color.New(color.Bold)
+	for o := range out {
+		header.Fprintf(w, "%s - %s:\n", o.InstanceId, o.Status)
+		if o.Error != nil {
+			fmt.Fprintf(w, "%s\n", o.Error)
+			continue
+		}
+		fmt.Fprintf(w, "%s\n", o.Output)
 	}
-	wg.Wait()
 	return
 }
 
+// GetOutput fetches standard output (or standard error) depending on the status
+// for the given command. The results are sent over a channel, which is closed
+// when all output has been fetched, or the timeout limit has been reached.
+func (self *Manager) GetOutput(instanceIds []string, commandId string, out chan<- Output, done <-chan bool) {
+	var wg sync.WaitGroup
+	var interrupts int
+
+	// Channel in case we need to stop go routines immediately
+	abort := make(chan bool)
+	defer close(abort)
+
+	// Spawn a go routine per instance id
+	for _, instanceId := range instanceIds {
+		wg.Add(1)
+		go self.pollInstanceOutput(instanceId, commandId, &wg, out, abort)
+	}
+
+	// Use a go routine to wait for tasks to complete
+	finished := make(chan bool)
+
+	go func() {
+		defer close(finished)
+		defer close(out)
+		wg.Wait()
+		finished <- true
+
+	}()
+
+	// Main thread should call abort() if a message is sent to signify
+	// that the main thread is done waiting. A 2nd signal on done should
+	// propagate to the go routines to exit immediately.
+	for {
+		select {
+		case <-finished:
+			return
+		case <-done:
+			if interrupts++; interrupts > 1 {
+				for _ = range instanceIds {
+					abort <- true
+				}
+				return
+			}
+			self.Abort(instanceIds, commandId)
+			continue
+		}
+	}
+}
+
 // Fetch output from a command invocation on an instance.
-func (self *Manager) getInstanceOutput(instanceId string, commandId string, output chan Output, wg *sync.WaitGroup) {
+func (self *Manager) pollInstanceOutput(instanceId string, commandId string, wg *sync.WaitGroup, out chan<- Output, done <-chan bool) {
 	defer wg.Done()
 	retry := time.NewTicker(time.Millisecond * time.Duration(self.PollFrequency))
 	limit := time.NewTimer(time.Second * time.Duration(self.PollTimeout))
@@ -168,30 +221,35 @@ func (self *Manager) getInstanceOutput(instanceId string, commandId string, outp
 
 	for {
 		select {
+		case <-done:
+			// Main thread is no longer waiting for output
+			return
 		case <-limit.C:
+			// We have reached the timeout
 			o.Error = errors.New("Timeout reached when awaiting output.")
-			output <- o
+			out <- o
 			return
 		case <-retry.C:
+			// Time to retry at the given frequency
 			result, err := self.SSM.GetCommandInvocation(&ssm.GetCommandInvocationInput{
 				CommandId:  aws.String(commandId),
 				InstanceId: aws.String(instanceId),
 			})
 			if err != nil {
 				o.Error = err
-				output <- o
+				out <- o
 				return
 			}
-			if out, done := processOutput(result); done {
-				output <- out
+			if o, ok := processInstanceOutput(result); ok {
+				out <- o
 				return
 			}
 		}
 	}
 }
 
-// Internal function to process output from GetCommandInvocation.
-func processOutput(input *ssm.GetCommandInvocationOutput) (Output, bool) {
+// Internal function to process output from GetCommandInvocation on a single instance.
+func processInstanceOutput(input *ssm.GetCommandInvocationOutput) (Output, bool) {
 	out := Output{
 		InstanceId: aws.StringValue(input.InstanceId),
 		Status:     aws.StringValue(input.StatusDetails),

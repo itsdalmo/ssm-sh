@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -62,6 +63,8 @@ type MockSSM struct {
 	CommandHistory []string
 	NextToken      string
 	OutputDelay    int
+	Aborted        bool
+	l              sync.Mutex
 }
 
 func (mock *MockSSM) DescribeInstanceInformation(input *ssm.DescribeInstanceInformationInput) (*ssm.DescribeInstanceInformationOutput, error) {
@@ -153,6 +156,9 @@ func (mock *MockSSM) CancelCommand(input *ssm.CancelCommandInput) (*ssm.CancelCo
 	// Make sure a command by this ID has been run before
 	for _, id := range mock.CommandHistory {
 		if aws.StringValue(input.CommandId) == id {
+			mock.l.Lock()
+			mock.Aborted = true
+			defer mock.l.Unlock()
 			return &ssm.CancelCommandOutput{}, nil
 		}
 	}
@@ -178,8 +184,18 @@ func (mock *MockSSM) GetCommandInvocation(input *ssm.GetCommandInvocationInput) 
 		time.Sleep(time.Duration(mock.OutputDelay) * time.Millisecond)
 	}
 
+	var status string
+	mock.l.Lock()
+	defer mock.l.Unlock()
+	if mock.Aborted {
+		status = "Cancelled"
+	} else {
+		status = mock.CommandStatus
+	}
+
 	return &ssm.GetCommandInvocationOutput{
-		StatusDetails:         aws.String(mock.CommandStatus),
+		InstanceId:            input.InstanceId,
+		StatusDetails:         aws.String(status),
 		StandardOutputContent: aws.String("example standard output"),
 		StandardErrorContent:  aws.String("example standard error"),
 	}, nil
@@ -367,7 +383,7 @@ func TestAbort(t *testing.T) {
 	})
 }
 
-func TestGetInstanceOutput(t *testing.T) {
+func TestGetOutput(t *testing.T) {
 	ssmMock := &MockSSM{
 		ShouldError:    false,
 		CommandStatus:  "Success",
@@ -383,12 +399,14 @@ func TestGetInstanceOutput(t *testing.T) {
 		targets = append(targets, aws.StringValue(instance.InstanceId))
 	}
 
-	t.Run("Output works", func(t *testing.T) {
+	t.Run("GetOutput works", func(t *testing.T) {
 		id, err := m.Run(targets, "ls -la")
 		assert.Nil(t, err)
 
 		out := make(chan manager.Output)
-		go m.Output(targets, id, out)
+		abort := make(chan bool)
+		defer close(abort)
+		go m.GetOutput(targets, id, out, abort)
 
 		var actual []string
 
@@ -401,7 +419,7 @@ func TestGetInstanceOutput(t *testing.T) {
 		assert.Equal(t, len(targets), len(actual))
 	})
 
-	t.Run("Output works with delay", func(t *testing.T) {
+	t.Run("GetOutput works with delay", func(t *testing.T) {
 		ssmMock.OutputDelay = 50 // Milliseconds
 		defer func() {
 			ssmMock.OutputDelay = 0
@@ -411,7 +429,9 @@ func TestGetInstanceOutput(t *testing.T) {
 		assert.Nil(t, err)
 
 		out := make(chan manager.Output)
-		go m.Output(targets[:1], id, out)
+		abort := make(chan bool)
+		defer close(abort)
+		go m.GetOutput(targets[:1], id, out, abort)
 
 		var actual []string
 
@@ -424,7 +444,7 @@ func TestGetInstanceOutput(t *testing.T) {
 		assert.Equal(t, 1, len(actual))
 	})
 
-	t.Run("Output works with standard error", func(t *testing.T) {
+	t.Run("GetOutput works with standard error", func(t *testing.T) {
 		ssmMock.CommandStatus = "Failed"
 		defer func() {
 			ssmMock.CommandStatus = "Success"
@@ -434,12 +454,60 @@ func TestGetInstanceOutput(t *testing.T) {
 		assert.Nil(t, err)
 
 		out := make(chan manager.Output)
-		go m.Output(targets[:1], id, out)
+		abort := make(chan bool)
+		defer close(abort)
+		go m.GetOutput(targets, id, out, abort)
 
 		for o := range out {
 			assert.Nil(t, o.Error)
 			assert.Equal(t, "Failed", o.Status)
 			assert.Equal(t, "example standard error", o.Output)
 		}
+	})
+}
+
+func TestOutput(t *testing.T) {
+	ssmMock := &MockSSM{
+		ShouldError:    false,
+		CommandStatus:  "Success",
+		CommandHistory: make([]string, 0),
+		NextToken:      "",
+	}
+	s3Mock := &MockS3{ShouldError: false}
+	m := NewTestManager(ssmMock, s3Mock)
+	targets := []string{"i-00000000000000001"}
+
+	t.Run("Output works", func(t *testing.T) {
+		id, err := m.Run(targets, "ls -la")
+		assert.Nil(t, err)
+
+		b := new(bytes.Buffer)
+		abort := make(chan bool)
+		defer close(abort)
+		m.Output(b, targets, id, abort)
+
+		actual := strings.TrimSpace(b.String())
+
+		assert.Contains(t, actual, "i-00000000000000001")
+		assert.Contains(t, actual, "Success")
+		assert.Contains(t, actual, "example standard output")
+	})
+
+	t.Run("Output is interruptable", func(t *testing.T) {
+		id, err := m.Run(targets, "ls -la")
+		assert.Nil(t, err)
+
+		b := new(bytes.Buffer)
+		abort := make(chan bool, 1)
+		defer close(abort)
+		abort <- true
+
+		m.Output(b, targets, id, abort)
+
+		actual := strings.TrimSpace(b.String())
+
+		assert.Contains(t, actual, "i-00000000000000001")
+		assert.Contains(t, actual, "Cancelled")
+		assert.Contains(t, actual, "Command was aborted")
 	})
 }

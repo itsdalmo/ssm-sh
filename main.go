@@ -12,7 +12,7 @@ func main() {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
 			os.Exit(0)
 		} else {
-			panic(err)
+			os.Exit(1)
 		}
 	}
 }
