@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager/s3manageriface"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/itsdalmo/ssm-sh/manager"
 	"github.com/stretchr/testify/assert"
-	"io"
+	"io/ioutil"
 	"strings"
 	"sync"
 	"testing"
@@ -37,23 +36,24 @@ func generateInstances() []*ssm.InstanceInformation {
 }
 
 type MockS3 struct {
-	s3manageriface.DownloaderAPI
+	s3iface.S3API
 	ShouldError bool
 }
 
-func (mock *MockS3) Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error) {
+func (mock *MockS3) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
 	if mock.ShouldError {
-		return -1, errors.New("expected")
+		return nil, errors.New("expected")
 	}
 	if input.Bucket == nil {
-		return -1, errors.New("Missing Bucket")
+		return nil, errors.New("Missing Bucket")
 	}
 	if input.Key == nil {
-		return -1, errors.New("Missing Key")
+		return nil, errors.New("Missing Key")
 	}
 
-	i, err := w.WriteAt([]byte("example output"), 0)
-	return int64(i), err
+	return &s3.GetObjectOutput{
+		Body: ioutil.NopCloser(strings.NewReader("example s3 output")),
+	}, nil
 }
 
 type MockSSM struct {
@@ -201,16 +201,6 @@ func (mock *MockSSM) GetCommandInvocation(input *ssm.GetCommandInvocationInput) 
 	}, nil
 }
 
-func NewTestManager(ssm ssmiface.SSMAPI, s3 s3manageriface.DownloaderAPI) *manager.Manager {
-	return &manager.Manager{
-		SSM:           ssm,
-		S3:            s3,
-		Region:        "eu-west-1",
-		PollFrequency: 500,
-		PollTimeout:   30,
-	}
-}
-
 func TestGetInstances(t *testing.T) {
 	ssmMock := &MockSSM{
 		ShouldError:    false,
@@ -219,7 +209,7 @@ func TestGetInstances(t *testing.T) {
 		NextToken:      "",
 	}
 	s3Mock := &MockS3{ShouldError: false}
-	m := NewTestManager(ssmMock, s3Mock)
+	m := manager.NewTestManager(ssmMock, s3Mock)
 
 	t.Run("Get managed instances works", func(t *testing.T) {
 		expected := generateInstances()
@@ -271,7 +261,7 @@ func TestList(t *testing.T) {
 		NextToken:      "",
 	}
 	s3Mock := &MockS3{ShouldError: false}
-	m := NewTestManager(ssmMock, s3Mock)
+	m := manager.NewTestManager(ssmMock, s3Mock)
 
 	t.Run("List works and can be limited", func(t *testing.T) {
 		b := new(bytes.Buffer)
@@ -311,7 +301,7 @@ func TestRun(t *testing.T) {
 		NextToken:      "",
 	}
 	s3Mock := &MockS3{ShouldError: false}
-	m := NewTestManager(ssmMock, s3Mock)
+	m := manager.NewTestManager(ssmMock, s3Mock)
 
 	instances := generateInstances()
 	var targets []string
@@ -348,7 +338,7 @@ func TestAbort(t *testing.T) {
 		NextToken:      "",
 	}
 	s3Mock := &MockS3{ShouldError: false}
-	m := NewTestManager(ssmMock, s3Mock)
+	m := manager.NewTestManager(ssmMock, s3Mock)
 
 	instances := generateInstances()
 	var targets []string
@@ -391,7 +381,7 @@ func TestGetOutput(t *testing.T) {
 		NextToken:      "",
 	}
 	s3Mock := &MockS3{ShouldError: false}
-	m := NewTestManager(ssmMock, s3Mock)
+	m := manager.NewTestManager(ssmMock, s3Mock)
 
 	instances := generateInstances()
 	var targets []string
@@ -403,7 +393,7 @@ func TestGetOutput(t *testing.T) {
 		id, err := m.Run(targets, "ls -la")
 		assert.Nil(t, err)
 
-		out := make(chan manager.Output)
+		out := make(chan manager.CommandOutput)
 		abort := make(chan bool)
 		defer close(abort)
 		go m.GetOutput(targets, id, out, abort)
@@ -428,7 +418,7 @@ func TestGetOutput(t *testing.T) {
 		id, err := m.Run(targets, "ls -la")
 		assert.Nil(t, err)
 
-		out := make(chan manager.Output)
+		out := make(chan manager.CommandOutput)
 		abort := make(chan bool)
 		defer close(abort)
 		go m.GetOutput(targets[:1], id, out, abort)
@@ -453,7 +443,7 @@ func TestGetOutput(t *testing.T) {
 		id, err := m.Run(targets, "ls -la")
 		assert.Nil(t, err)
 
-		out := make(chan manager.Output)
+		out := make(chan manager.CommandOutput)
 		abort := make(chan bool)
 		defer close(abort)
 		go m.GetOutput(targets, id, out, abort)
@@ -474,7 +464,7 @@ func TestOutput(t *testing.T) {
 		NextToken:      "",
 	}
 	s3Mock := &MockS3{ShouldError: false}
-	m := NewTestManager(ssmMock, s3Mock)
+	m := manager.NewTestManager(ssmMock, s3Mock)
 	targets := []string{"i-00000000000000001"}
 
 	t.Run("Output works", func(t *testing.T) {

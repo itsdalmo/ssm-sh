@@ -1,15 +1,16 @@
 package manager
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager/s3manageriface"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/fatih/color"
+	"github.com/pkg/errors"
 	"io"
 	"strings"
 	"sync"
@@ -18,15 +19,16 @@ import (
 )
 
 type Manager struct {
-	SSM           ssmiface.SSMAPI
-	S3            s3manageriface.DownloaderAPI
-	Region        string
-	PollFrequency int
-	PollTimeout   int
+	ssmClient ssmiface.SSMAPI
+	s3Client  s3iface.S3API
+	region    string
+
+	pollFrequency int
+	pollTimeout   int
 }
 
 // The return type transmitted over a channel when fetching output.
-type Output struct {
+type CommandOutput struct {
 	InstanceId string
 	Status     string
 	Output     string
@@ -35,12 +37,24 @@ type Output struct {
 
 // Create a new manager.
 func NewManager(sess *session.Session, region string, frequency int, timeout int) *Manager {
+	config := &aws.Config{Region: aws.String(region)}
 	return &Manager{
-		SSM:           ssm.New(sess, &aws.Config{Region: aws.String(region)}),
-		S3:            s3manager.NewDownloader(sess),
-		Region:        region,
-		PollFrequency: frequency,
-		PollTimeout:   timeout,
+		ssmClient:     ssm.New(sess, config),
+		s3Client:      s3.New(sess, config),
+		region:        region,
+		pollFrequency: frequency,
+		pollTimeout:   timeout,
+	}
+}
+
+// Create a new manager for testing purposes.
+func NewTestManager(ssm ssmiface.SSMAPI, s3 s3iface.S3API) *Manager {
+	return &Manager{
+		ssmClient:     ssm,
+		s3Client:      s3,
+		region:        "eu-west-1",
+		pollFrequency: 500,
+		pollTimeout:   30,
 	}
 }
 
@@ -55,7 +69,7 @@ func (self *Manager) GetInstances(limit int) ([]*ssm.InstanceInformation, error)
 
 	var out []*ssm.InstanceInformation
 	for {
-		response, err := self.SSM.DescribeInstanceInformation(input)
+		response, err := self.ssmClient.DescribeInstanceInformation(input)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +134,7 @@ func (self *Manager) Run(instanceIds []string, command string) (string, error) {
 		Parameters:   map[string][]*string{"commands": []*string{aws.String(command)}},
 	}
 
-	res, err := self.SSM.SendCommand(input)
+	res, err := self.ssmClient.SendCommand(input)
 	if err != nil {
 		return "", err
 	}
@@ -130,7 +144,7 @@ func (self *Manager) Run(instanceIds []string, command string) (string, error) {
 
 // Abort command on the given instance ids.
 func (self *Manager) Abort(instanceIds []string, commandId string) error {
-	_, err := self.SSM.CancelCommand(&ssm.CancelCommandInput{
+	_, err := self.ssmClient.CancelCommand(&ssm.CancelCommandInput{
 		CommandId:   aws.String(commandId),
 		InstanceIds: aws.StringSlice(instanceIds),
 	})
@@ -143,7 +157,7 @@ func (self *Manager) Abort(instanceIds []string, commandId string) error {
 // Wrapper for GetOutput which writes the output to the desired io.Writer. Interrupts are handled
 // by calling Abort and waiting for the final output of the command.
 func (self *Manager) Output(w io.Writer, instanceIds []string, commandId string, done <-chan bool) {
-	out := make(chan Output)
+	out := make(chan CommandOutput)
 	go self.GetOutput(instanceIds, commandId, out, done)
 
 	header := color.New(color.Bold)
@@ -161,7 +175,7 @@ func (self *Manager) Output(w io.Writer, instanceIds []string, commandId string,
 // GetOutput fetches standard output (or standard error) depending on the status
 // for the given command. The results are sent over a channel, which is closed
 // when all output has been fetched, or the timeout limit has been reached.
-func (self *Manager) GetOutput(instanceIds []string, commandId string, out chan<- Output, done <-chan bool) {
+func (self *Manager) GetOutput(instanceIds []string, commandId string, out chan<- CommandOutput, done <-chan bool) {
 	var wg sync.WaitGroup
 	var interrupts int
 
@@ -207,12 +221,12 @@ func (self *Manager) GetOutput(instanceIds []string, commandId string, out chan<
 }
 
 // Fetch output from a command invocation on an instance.
-func (self *Manager) pollInstanceOutput(instanceId string, commandId string, wg *sync.WaitGroup, out chan<- Output, done <-chan bool) {
+func (self *Manager) pollInstanceOutput(instanceId string, commandId string, wg *sync.WaitGroup, out chan<- CommandOutput, done <-chan bool) {
 	defer wg.Done()
-	retry := time.NewTicker(time.Millisecond * time.Duration(self.PollFrequency))
-	limit := time.NewTimer(time.Second * time.Duration(self.PollTimeout))
+	retry := time.NewTicker(time.Millisecond * time.Duration(self.pollFrequency))
+	limit := time.NewTimer(time.Second * time.Duration(self.pollTimeout))
 
-	o := Output{
+	o := CommandOutput{
 		InstanceId: instanceId,
 		Status:     "NA",
 		Output:     "NA",
@@ -231,7 +245,7 @@ func (self *Manager) pollInstanceOutput(instanceId string, commandId string, wg 
 			return
 		case <-retry.C:
 			// Time to retry at the given frequency
-			result, err := self.SSM.GetCommandInvocation(&ssm.GetCommandInvocationInput{
+			result, err := self.ssmClient.GetCommandInvocation(&ssm.GetCommandInvocationInput{
 				CommandId:  aws.String(commandId),
 				InstanceId: aws.String(instanceId),
 			})
@@ -249,8 +263,8 @@ func (self *Manager) pollInstanceOutput(instanceId string, commandId string, wg 
 }
 
 // Internal function to process output from GetCommandInvocation on a single instance.
-func processInstanceOutput(input *ssm.GetCommandInvocationOutput) (Output, bool) {
-	out := Output{
+func processInstanceOutput(input *ssm.GetCommandInvocationOutput) (CommandOutput, bool) {
+	out := CommandOutput{
 		InstanceId: aws.StringValue(input.InstanceId),
 		Status:     aws.StringValue(input.StatusDetails),
 		Output:     "",
@@ -273,4 +287,22 @@ func processInstanceOutput(input *ssm.GetCommandInvocationOutput) (Output, bool)
 		out.Error = errors.New(fmt.Sprintf("Unrecoverable status: %s", out.Status))
 		return out, true
 	}
+}
+
+func (self *Manager) readS3Output(bucket, key string) (string, error) {
+	output, err := self.s3Client.GetObject(&s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	defer output.Body.Close()
+	b := bytes.NewBuffer(nil)
+
+	if _, err := io.Copy(b, output.Body); err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }
