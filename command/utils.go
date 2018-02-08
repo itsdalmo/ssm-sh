@@ -1,4 +1,4 @@
-package cmd
+package command
 
 import (
 	"bufio"
@@ -48,10 +48,10 @@ func targetFlagHelper(opts TargetOptions) ([]string, error) {
 	return targets, nil
 }
 
-// Print output of manager.GetCommandOutput
+// PrintCommandOutput writes the output from command invocations.
 func PrintCommandOutput(wrt io.Writer, output *manager.CommandOutput) error {
 	header := color.New(color.Bold)
-	if _, err := header.Fprintf(wrt, "\n%s - %s:\n", output.InstanceId, output.Status); err != nil {
+	if _, err := header.Fprintf(wrt, "\n%s - %s:\n", output.InstanceID, output.Status); err != nil {
 		return err
 	}
 	if output.Error != nil {
@@ -65,7 +65,7 @@ func PrintCommandOutput(wrt io.Writer, output *manager.CommandOutput) error {
 	return nil
 }
 
-// Print output of manager.ListInstances
+// PrintInstances writes the output from ListInstances.
 func PrintInstances(wrt io.Writer, instances []*manager.Instance) error {
 	w := tabwriter.NewWriter(wrt, 0, 8, 1, ' ', 0)
 	header := []string{
@@ -84,10 +84,8 @@ func PrintInstances(wrt io.Writer, instances []*manager.Instance) error {
 			return err
 		}
 	}
-	if err := w.Flush(); err != nil {
-		return err
-	}
-	return nil
+	err := w.Flush()
+	return err
 
 }
 
@@ -107,7 +105,7 @@ func interruptHandler() <-chan bool {
 		var last time.Time
 		threshold := 50 * time.Millisecond
 
-		for _ = range sigterm {
+		for range sigterm {
 			if time.Since(last) < threshold {
 				continue
 			}

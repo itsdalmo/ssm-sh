@@ -1,4 +1,4 @@
-package cmd
+package command
 
 import (
 	"bufio"
@@ -47,19 +47,19 @@ func (command *ShellCommand) Execute([]string) error {
 		}
 
 		// Start command
-		commandId, err := m.RunCommand(targets, cmd)
+		commandID, err := m.RunCommand(targets, cmd)
 		if err != nil {
 			return errors.Wrap(err, "failed to Run command")
 		}
 		out := make(chan *manager.CommandOutput)
-		go m.GetCommandOutput(ctx, targets, commandId, out)
+		go m.GetCommandOutput(ctx, targets, commandID, out)
 
 	Polling:
 		for {
 			select {
 			case <-abort:
 				interrupts++
-				err := m.AbortCommand(targets, commandId)
+				err := m.AbortCommand(targets, commandID)
 				if err != nil {
 					return errors.Wrap(err, "failed to abort command on sigterm")
 				}

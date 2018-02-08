@@ -6,9 +6,10 @@ import (
 	"time"
 )
 
+// NewInstance creates a new Instance from ssm.InstanceInformation.
 func NewInstance(in *ssm.InstanceInformation) *Instance {
 	return &Instance{
-		InstanceId:       *in.InstanceId,
+		InstanceID:       *in.InstanceId,
 		PlatformName:     *in.PlatformName,
 		PlatformVersion:  *in.PlatformVersion,
 		IPAddress:        *in.IPAddress,
@@ -16,28 +17,33 @@ func NewInstance(in *ssm.InstanceInformation) *Instance {
 	}
 }
 
+// Instance is a replacement for ssm.InstanceInformation which
+// does not use pointers for all values.
 type Instance struct {
-	InstanceId       string
+	InstanceID       string
 	PlatformName     string
 	PlatformVersion  string
 	IPAddress        string
 	LastPingDateTime time.Time
 }
 
-func (self *Instance) Id() string {
-	return self.InstanceId
+// ID returns the InstanceID of an Instance.
+func (i *Instance) ID() string {
+	return i.InstanceID
 }
 
-func (self *Instance) TabString() string {
+// TabString returns all field values separated by "\t|\t" for
+// an instance. Use with tabwriter to output a table of instances.
+func (i *Instance) TabString() string {
 	var del = "|"
 	var tab = "\t"
 
 	fields := []string{
-		self.InstanceId,
-		self.PlatformName,
-		self.PlatformVersion,
-		self.IPAddress,
-		self.LastPingDateTime.Format("2006-01-02"),
+		i.InstanceID,
+		i.PlatformName,
+		i.PlatformVersion,
+		i.IPAddress,
+		i.LastPingDateTime.Format("2006-01-02"),
 	}
 	return strings.Join(fields, tab+del+tab)
 }
