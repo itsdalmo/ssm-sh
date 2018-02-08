@@ -5,12 +5,37 @@
 Little experiment to mimic SSH by using SSM agent to send commands to
 remote instances and fetching the output.
 
+## Install
+
+Have Go installed:
+
+```bash
+$ which go
+/usr/local/bin/go
+
+$ echo $GOPATH
+/Users/dalmo/go
+
+$ echo $PATH
+# Make sure $GOPATH/bin is in your PATH.
+```
+
+Get the repository:
+
+```bash
+go get -u github.com/itsdalmo/ssm-sh
+```
+
+If everything was successful, you should have a shiny new binary:
+
+```bash
+which ssm-sh
+# Should point to $GOPATH/bin/ssm-sh
+```
+
 ### Usage
 
 ```bash
-$ dep ensure
-$ go install
-
 $ ssm-sh --help
 
 Usage:
