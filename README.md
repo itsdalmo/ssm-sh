@@ -48,7 +48,6 @@ $ ssm-sh run --help
 [run command options]
       -t, --target=      One or more instance ids to target
           --target-file= Path to a file containing a list of targets.
-      -f, --frequency=   Polling frequency (millseconds to wait between requests). (default: 500)
       -i, --timeout=     Seconds to wait for command result before timing out. (default: 30)
 ```
 
