@@ -1,4 +1,4 @@
-package command
+package cmd
 
 import (
 	"github.com/itsdalmo/ssm-sh/manager"
@@ -7,18 +7,23 @@ import (
 )
 
 type ListCommand struct {
-	Limit int `short:"l" long:"limit" description:"Limit the number of instances printed" default:"50"`
+	Limit int64 `short:"l" long:"limit" description:"Limit the number of instances printed" default:"50"`
 }
 
 func (command *ListCommand) Execute([]string) error {
 	sess, err := newSession()
 	if err != nil {
-		return errors.Wrap(err, "Failed to create new AWS session")
+		return errors.Wrap(err, "failed to create new session")
+	}
+	m := manager.NewManager(sess, Command.AwsOpts.Region)
+
+	instances, err := m.ListInstances(command.Limit)
+	if err != nil {
+		return errors.Wrap(err, "failed to list instances")
 	}
 
-	svc := manager.NewManager(sess, Cmd.AwsOpts.Region, 0, 0)
-	if err := svc.List(os.Stdout, command.Limit); err != nil {
-		return errors.Wrap(err, "Failed to list instances")
+	if err := PrintInstances(os.Stdout, instances); err != nil {
+		return errors.Wrap(err, "failed to print instances")
 	}
 
 	return nil

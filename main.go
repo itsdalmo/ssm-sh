@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	_, err := flags.Parse(&command.Cmd)
+	_, err := flags.Parse(&cmd.Command)
 	if err != nil {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
 			os.Exit(0)

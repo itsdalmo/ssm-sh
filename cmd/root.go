@@ -1,10 +1,8 @@
-package command
+package cmd
 
-import (
-	"github.com/aws/aws-sdk-go/aws/session"
-)
+import ()
 
-var Cmd RootCommand
+var Command RootCommand
 
 type RootCommand struct {
 	List    ListCommand  `command:"list" alias:"ls" description:"List managed instances."`
@@ -23,18 +21,4 @@ type SsmOptions struct {
 	TargetFile string   `long:"target-file" description:"Path to a file containing a list of targets."`
 	Frequency  int      `short:"f" long:"frequency" description:"Polling frequency (millseconds to wait between requests)." default:"500"`
 	Timeout    int      `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
-}
-
-func newSession() (*session.Session, error) {
-	opts := session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}
-	if Cmd.AwsOpts.Profile != "" {
-		opts.Profile = Cmd.AwsOpts.Profile
-	}
-	sess, err := session.NewSessionWithOptions(opts)
-	if err != nil {
-		return nil, err
-	}
-	return sess, nil
 }
