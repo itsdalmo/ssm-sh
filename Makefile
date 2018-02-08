@@ -1,6 +1,7 @@
 BINARY_NAME=ssm-sh
 TARGET ?= darwin
 DOCKER_REPO=itsdalmo/ssm-sh
+SRC=$(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 default: test
 
@@ -14,7 +15,9 @@ build: test
 
 test:
 	@echo "== Test =="
-	go fmt $$(go list ./... | grep -v /vendor/)
+	gofmt -s -l -w $(SRC)
+	golint manager
+	golint command
 	go vet -v ./...
 	go test -race -v ./...
 

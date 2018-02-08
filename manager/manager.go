@@ -23,7 +23,7 @@ type Manager struct {
 	region    string
 }
 
-// Create a new manager.
+// NewManager creates a new Manager from an AWS session and region.
 func NewManager(sess *session.Session, region string) *Manager {
 	config := &aws.Config{Region: aws.String(region)}
 	return &Manager{
@@ -33,7 +33,7 @@ func NewManager(sess *session.Session, region string) *Manager {
 	}
 }
 
-// Create a new manager for testing purposes.
+// NewTestManager creates a new manager for testing purposes.
 func NewTestManager(ssm ssmiface.SSMAPI, s3 s3iface.S3API) *Manager {
 	return &Manager{
 		ssmClient: ssm,
@@ -42,8 +42,8 @@ func NewTestManager(ssm ssmiface.SSMAPI, s3 s3iface.S3API) *Manager {
 	}
 }
 
-// Fetch a list of instances managed by SSM. Paginates until all responses have been collected.
-func (self *Manager) ListInstances(limit int64) ([]*Instance, error) {
+// ListInstances fetches a list of instances managed by SSM. Paginates until all responses have been collected.
+func (m *Manager) ListInstances(limit int64) ([]*Instance, error) {
 	var out []*Instance
 
 	input := &ssm.DescribeInstanceInformationInput{
@@ -51,7 +51,7 @@ func (self *Manager) ListInstances(limit int64) ([]*Instance, error) {
 	}
 
 	for {
-		response, err := self.ssmClient.DescribeInstanceInformation(input)
+		response, err := m.ssmClient.DescribeInstanceInformation(input)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to describe instance information")
 		}
@@ -68,15 +68,15 @@ func (self *Manager) ListInstances(limit int64) ([]*Instance, error) {
 }
 
 // RunCommand on the given instance ids.
-func (self *Manager) RunCommand(instanceIds []string, command string) (string, error) {
+func (m *Manager) RunCommand(instanceIds []string, command string) (string, error) {
 	input := &ssm.SendCommandInput{
 		InstanceIds:  aws.StringSlice(instanceIds),
 		DocumentName: aws.String("AWS-RunShellScript"),
 		Comment:      aws.String("Interactive command."),
-		Parameters:   map[string][]*string{"commands": []*string{aws.String(command)}},
+		Parameters:   map[string][]*string{"commands": {aws.String(command)}},
 	}
 
-	res, err := self.ssmClient.SendCommand(input)
+	res, err := m.ssmClient.SendCommand(input)
 	if err != nil {
 		return "", err
 	}
@@ -85,9 +85,9 @@ func (self *Manager) RunCommand(instanceIds []string, command string) (string, e
 }
 
 // AbortCommand command on the given instance ids.
-func (self *Manager) AbortCommand(instanceIds []string, commandId string) error {
-	_, err := self.ssmClient.CancelCommand(&ssm.CancelCommandInput{
-		CommandId:   aws.String(commandId),
+func (m *Manager) AbortCommand(instanceIds []string, commandID string) error {
+	_, err := m.ssmClient.CancelCommand(&ssm.CancelCommandInput{
+		CommandId:   aws.String(commandID),
 		InstanceIds: aws.StringSlice(instanceIds),
 	})
 	if err != nil {
@@ -96,9 +96,9 @@ func (self *Manager) AbortCommand(instanceIds []string, commandId string) error 
 	return nil
 }
 
-// The return type transmitted over a channel when fetching output.
+// CommandOutput is the return type transmitted over a channel when fetching output.
 type CommandOutput struct {
-	InstanceId string
+	InstanceID string
 	Status     string
 	Output     string
 	Error      error
@@ -106,13 +106,13 @@ type CommandOutput struct {
 
 // GetCommandOutput fetches the results from a command invocation for all specified instanceIds and
 // closes the receiving channel before exiting.
-func (self *Manager) GetCommandOutput(ctx context.Context, instanceIds []string, commandId string, out chan<- *CommandOutput) {
+func (m *Manager) GetCommandOutput(ctx context.Context, instanceIds []string, commandID string, out chan<- *CommandOutput) {
 	defer close(out)
 	var wg sync.WaitGroup
 
 	for _, id := range instanceIds {
 		wg.Add(1)
-		go self.pollInstanceOutput(ctx, id, commandId, out, &wg)
+		go m.pollInstanceOutput(ctx, id, commandID, out, &wg)
 	}
 
 	wg.Wait()
@@ -120,7 +120,7 @@ func (self *Manager) GetCommandOutput(ctx context.Context, instanceIds []string,
 }
 
 // Fetch output from a command invocation on an instance.
-func (self *Manager) pollInstanceOutput(ctx context.Context, instanceId string, commandId string, c chan<- *CommandOutput, wg *sync.WaitGroup) {
+func (m *Manager) pollInstanceOutput(ctx context.Context, instanceID string, commandID string, c chan<- *CommandOutput, wg *sync.WaitGroup) {
 	defer wg.Done()
 	retry := time.NewTicker(time.Millisecond * time.Duration(500))
 
@@ -131,9 +131,9 @@ func (self *Manager) pollInstanceOutput(ctx context.Context, instanceId string, 
 			return
 		case <-retry.C:
 			// Time to retry at the given frequency
-			result, err := self.ssmClient.GetCommandInvocation(&ssm.GetCommandInvocationInput{
-				CommandId:  aws.String(commandId),
-				InstanceId: aws.String(instanceId),
+			result, err := m.ssmClient.GetCommandInvocation(&ssm.GetCommandInvocationInput{
+				CommandId:  aws.String(commandID),
+				InstanceId: aws.String(instanceID),
 			})
 			if out, ok := newCommandOutput(result, err); ok {
 				c <- out
@@ -145,7 +145,7 @@ func (self *Manager) pollInstanceOutput(ctx context.Context, instanceId string, 
 
 func newCommandOutput(result *ssm.GetCommandInvocationOutput, err error) (*CommandOutput, bool) {
 	out := &CommandOutput{
-		InstanceId: aws.StringValue(result.InstanceId),
+		InstanceID: aws.StringValue(result.InstanceId),
 		Status:     aws.StringValue(result.StatusDetails),
 		Output:     "",
 		Error:      err,
@@ -168,13 +168,13 @@ func newCommandOutput(result *ssm.GetCommandInvocationOutput, err error) (*Comma
 		out.Output = aws.StringValue(result.StandardErrorContent)
 		return out, true
 	default:
-		out.Error = errors.New(fmt.Sprintf("Unrecoverable status: %s", out.Status))
+		out.Error = fmt.Errorf("Unrecoverable status: %s", out.Status)
 		return out, true
 	}
 }
 
-func (self *Manager) readS3Output(bucket, key string) (string, error) {
-	output, err := self.s3Client.GetObject(&s3.GetObjectInput{
+func (m *Manager) readS3Output(bucket, key string) (string, error) {
+	output, err := m.s3Client.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})

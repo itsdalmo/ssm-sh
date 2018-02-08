@@ -1,9 +1,9 @@
-package cmd_test
+package command_test
 
 import (
 	"bytes"
 	"errors"
-	"github.com/itsdalmo/ssm-sh/cmd"
+	"github.com/itsdalmo/ssm-sh/command"
 	"github.com/itsdalmo/ssm-sh/manager"
 	"github.com/stretchr/testify/assert"
 	"strings"
@@ -13,15 +13,15 @@ import (
 
 func TestPrintInstances(t *testing.T) {
 	input := []*manager.Instance{
-		&manager.Instance{
-			InstanceId:       "i-00000000000000001",
+		{
+			InstanceID:       "i-00000000000000001",
 			PlatformName:     "Amazon Linux",
 			PlatformVersion:  "1.0",
 			IPAddress:        "10.0.0.1",
 			LastPingDateTime: time.Date(2018, time.January, 27, 0, 0, 0, 0, time.UTC),
 		},
-		&manager.Instance{
-			InstanceId:       "i-00000000000000002",
+		{
+			InstanceID:       "i-00000000000000002",
 			PlatformName:     "Amazon Linux 2",
 			PlatformVersion:  "2.0",
 			IPAddress:        "10.0.0.100",
@@ -37,7 +37,7 @@ i-00000000000000002 | Amazon Linux 2 | 2.0     | 10.0.0.100 | 2018-01-30
 `)
 
 		b := new(bytes.Buffer)
-		err := cmd.PrintInstances(b, input)
+		err := command.PrintInstances(b, input)
 		actual := strings.TrimSpace(b.String())
 		assert.Nil(t, err)
 		assert.NotNil(t, actual)
@@ -47,20 +47,20 @@ i-00000000000000002 | Amazon Linux 2 | 2.0     | 10.0.0.100 | 2018-01-30
 
 func TestPrintCommandOutput(t *testing.T) {
 	input := []*manager.CommandOutput{
-		&manager.CommandOutput{
-			InstanceId: "i-00000000000000001",
+		{
+			InstanceID: "i-00000000000000001",
 			Status:     "Success",
 			Output:     "Standard output",
 			Error:      nil,
 		},
-		&manager.CommandOutput{
-			InstanceId: "i-00000000000000002",
+		{
+			InstanceID: "i-00000000000000002",
 			Status:     "Failed",
 			Output:     "Standard error",
 			Error:      nil,
 		},
-		&manager.CommandOutput{
-			InstanceId: "i-00000000000000003",
+		{
+			InstanceID: "i-00000000000000003",
 			Status:     "Error",
 			Output:     "",
 			Error:      errors.New("error"),
@@ -81,7 +81,7 @@ error
 
 		b := new(bytes.Buffer)
 		for _, instance := range input {
-			err := cmd.PrintCommandOutput(b, instance)
+			err := command.PrintCommandOutput(b, instance)
 			assert.Nil(t, err)
 		}
 		actual := strings.TrimSpace(b.String())

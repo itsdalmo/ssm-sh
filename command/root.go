@@ -1,6 +1,4 @@
-package cmd
-
-import ()
+package command
 
 var Command RootCommand
 

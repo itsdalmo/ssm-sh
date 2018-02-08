@@ -1,4 +1,4 @@
-package cmd
+package command
 
 import (
 	"context"
@@ -31,7 +31,7 @@ func (command *RunCommand) Execute(args []string) error {
 	fmt.Printf("Use ctrl-c to abort the command early.\n\n")
 
 	// Start the command
-	commandId, err := m.RunCommand(targets, strings.Join(args, " "))
+	commandID, err := m.RunCommand(targets, strings.Join(args, " "))
 	if err != nil {
 		return errors.Wrap(err, "failed to run command")
 	}
@@ -45,7 +45,7 @@ func (command *RunCommand) Execute(args []string) error {
 	defer cancel()
 
 	out := make(chan *manager.CommandOutput)
-	go m.GetCommandOutput(ctx, targets, commandId, out)
+	go m.GetCommandOutput(ctx, targets, commandID, out)
 
 	for {
 		select {
@@ -53,7 +53,7 @@ func (command *RunCommand) Execute(args []string) error {
 			return errors.New("timeout reached")
 		case <-abort:
 			interrupts++
-			err := m.AbortCommand(targets, commandId)
+			err := m.AbortCommand(targets, commandID)
 			if err != nil {
 				return errors.Wrap(err, "failed to abort command on sigterm")
 			}

@@ -12,14 +12,14 @@ import (
 
 var (
 	inputInstances = []*ssm.InstanceInformation{
-		&ssm.InstanceInformation{
+		{
 			InstanceId:       aws.String("i-00000000000000001"),
 			PlatformName:     aws.String("Amazon Linux"),
 			PlatformVersion:  aws.String("1.0"),
 			IPAddress:        aws.String("10.0.0.1"),
 			LastPingDateTime: aws.Time(time.Date(2018, time.January, 27, 0, 0, 0, 0, time.UTC)),
 		},
-		&ssm.InstanceInformation{
+		{
 			InstanceId:       aws.String("i-00000000000000002"),
 			PlatformName:     aws.String("Amazon Linux 2"),
 			PlatformVersion:  aws.String("2.0"),
@@ -29,15 +29,15 @@ var (
 	}
 
 	outputInstances = []*manager.Instance{
-		&manager.Instance{
-			InstanceId:       "i-00000000000000001",
+		{
+			InstanceID:       "i-00000000000000001",
 			PlatformName:     "Amazon Linux",
 			PlatformVersion:  "1.0",
 			IPAddress:        "10.0.0.1",
 			LastPingDateTime: time.Date(2018, time.January, 27, 0, 0, 0, 0, time.UTC),
 		},
-		&manager.Instance{
-			InstanceId:       "i-00000000000000002",
+		{
+			InstanceID:       "i-00000000000000002",
 			PlatformName:     "Amazon Linux 2",
 			PlatformVersion:  "2.0",
 			IPAddress:        "10.0.0.100",
@@ -233,7 +233,7 @@ func TestOutput(t *testing.T) {
 			assert.Nil(t, o.Error)
 			assert.Equal(t, "Success", o.Status)
 			assert.Equal(t, "example standard output", o.Output)
-			actual = append(actual, o.InstanceId)
+			actual = append(actual, o.InstanceID)
 		}
 		assert.Equal(t, len(targets), len(actual))
 	})
@@ -271,7 +271,7 @@ func TestOutput(t *testing.T) {
 		var actual []string
 
 		for o := range out {
-			actual = append(actual, o.InstanceId)
+			actual = append(actual, o.InstanceID)
 		}
 		assert.Equal(t, 0, len(actual))
 	})

@@ -19,7 +19,7 @@ func TestInstance(t *testing.T) {
 	}
 
 	output := &manager.Instance{
-		InstanceId:       "i-00000000000000001",
+		InstanceID:       "i-00000000000000001",
 		PlatformName:     "Amazon Linux",
 		PlatformVersion:  "1.0",
 		IPAddress:        "10.0.0.1",
@@ -34,7 +34,7 @@ func TestInstance(t *testing.T) {
 
 	t.Run("Instance Id works", func(t *testing.T) {
 		expected := "i-00000000000000001"
-		actual := output.Id()
+		actual := output.ID()
 		assert.Equal(t, expected, actual)
 	})
 
