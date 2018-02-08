@@ -7,6 +7,10 @@ remote instances and fetching the output.
 
 ## Install
 
+Grab a binary from the [releases](https://github.com/itsdalmo/ssm-sh/releases).
+
+### Manually
+
 Have Go installed:
 
 ```bash
