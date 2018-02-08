@@ -11,7 +11,8 @@ import (
 )
 
 type RunCommand struct {
-	SsmOpts SsmOptions
+	Timeout    int `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
+	TargetOpts TargetOptions
 }
 
 func (command *RunCommand) Execute(args []string) error {
@@ -22,7 +23,7 @@ func (command *RunCommand) Execute(args []string) error {
 
 	m := manager.NewManager(sess, Command.AwsOpts.Region)
 
-	targets, err := targetFlagHelper(command.SsmOpts)
+	targets, err := targetFlagHelper(command.TargetOpts)
 	if err != nil {
 		return errors.Wrap(err, "failed to set targets")
 	}
@@ -40,7 +41,7 @@ func (command *RunCommand) Execute(args []string) error {
 	abort := interruptHandler()
 
 	// Get output
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(command.SsmOpts.Timeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(command.Timeout)*time.Second)
 	defer cancel()
 
 	out := make(chan *manager.CommandOutput)
@@ -48,6 +49,8 @@ func (command *RunCommand) Execute(args []string) error {
 
 	for {
 		select {
+		case <-ctx.Done():
+			return errors.New("timeout reached")
 		case <-abort:
 			interrupts++
 			err := m.AbortCommand(targets, commandId)
@@ -55,7 +58,7 @@ func (command *RunCommand) Execute(args []string) error {
 				return errors.Wrap(err, "failed to abort command on sigterm")
 			}
 			if interrupts > 1 {
-				return nil
+				return errors.New("interrupted by user")
 			}
 		case output, open := <-out:
 			if !open {

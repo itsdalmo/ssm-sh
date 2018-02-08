@@ -31,7 +31,7 @@ func newSession() (*session.Session, error) {
 }
 
 // Combine target flags
-func targetFlagHelper(opts SsmOptions) ([]string, error) {
+func targetFlagHelper(opts TargetOptions) ([]string, error) {
 	var targets []string
 	targets = opts.Targets
 

@@ -16,9 +16,7 @@ type AwsOptions struct {
 	Region  string `short:"r" long:"region" description:"Region to target." default:"eu-west-1"`
 }
 
-type SsmOptions struct {
+type TargetOptions struct {
 	Targets    []string `short:"t" long:"target" description:"One or more instance ids to target"`
 	TargetFile string   `long:"target-file" description:"Path to a file containing a list of targets."`
-	Frequency  int      `short:"f" long:"frequency" description:"Polling frequency (millseconds to wait between requests)." default:"500"`
-	Timeout    int      `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
 }

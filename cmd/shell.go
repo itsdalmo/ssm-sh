@@ -10,7 +10,7 @@ import (
 )
 
 type ShellCommand struct {
-	SsmOpts SsmOptions
+	TargetOpts TargetOptions
 }
 
 func (command *ShellCommand) Execute([]string) error {
@@ -21,7 +21,7 @@ func (command *ShellCommand) Execute([]string) error {
 
 	m := manager.NewManager(sess, Command.AwsOpts.Region)
 
-	targets, err := targetFlagHelper(command.SsmOpts)
+	targets, err := targetFlagHelper(command.TargetOpts)
 	if err != nil {
 		return errors.Wrap(err, "failed to set targets")
 	}
