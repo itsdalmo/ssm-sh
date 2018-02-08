@@ -16,14 +16,17 @@ build: test
 test:
 	@echo "== Test =="
 	gofmt -s -l -w $(SRC)
-	golint manager
-	golint command
 	go vet -v ./...
 	go test -race -v ./...
 
 clean:
 	@echo "== Cleaning =="
 	rm ssm-sh*
+
+lint:
+	@echo "== Lint =="
+	golint manager
+	golint command
 
 run-docker:
 	@echo "== Docker run =="
