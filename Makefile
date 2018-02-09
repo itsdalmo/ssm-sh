@@ -1,5 +1,7 @@
 BINARY_NAME=ssm-sh
 TARGET ?= darwin
+ARCH ?= amd64
+EXT ?= ""
 DOCKER_REPO=itsdalmo/ssm-sh
 SRC=$(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
@@ -38,6 +40,6 @@ build-docker:
 
 build-release:
 	@echo "== Release build =="
-	CGO_ENABLED=0 GOOS=$(TARGET) GOARCH=amd64 go build -o $(BINARY_NAME)-$(TARGET)-amd64 -v
+	CGO_ENABLED=0 GOOS=$(TARGET) GOARCH=$(ARCH) go build -o $(BINARY_NAME)-$(TARGET)-$(ARCH)$(EXT) -v
 
 .PHONY: default build test build-docker run-docker build-release

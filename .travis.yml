@@ -10,10 +10,20 @@ matrix:
   include:
   - os: osx
     go: 1.9.x
-    env: TARGET=darwin
+    env:
+      - TARGET=darwin
+      - ARCH=amd64
   - os: linux
     go: 1.9.x
-    env: TARGET=linux
+    env:
+      - TARGET=linux
+      - ARCH=amd64
+  - os: linux
+    go: 1.9.x
+    env:
+      - TARGET=windows
+      - ARCH=amd64
+      - EXT=.exe
 notifications:
   email: false
 script:
@@ -29,7 +39,7 @@ deploy:
   provider: releases
   api_key:
     secure: Q4bI2exKiFZ8NptUjxGLY7dJkaBKUrK+M/rpXHQgp72T3ybn0u+97g1z3ZuZtKrLjMHbJqdV429H77WJzEt/v6Dq1uQOAXFLVKoKatkVqTVeY6rJ8hSBGc24PmXQPq3q1mThk1R3on/fmsCb7zoJ9vc6leJK37bpxuaqrcwxoRR/METmhuJC1TO3UMS4SxilEFF6fLFCD/UiSuNgC3LDvWm/EOsVO49Yk3iBSplaO3rU0GmtQOSZBaLHl0+OlwP1cg+jGDSXGmvs4HndZ/3A4flE32cGECZN6qWPtQnLGXGrAp6bZiFcBbls1zU+Q1edOg2sxrxhR8RGEfa4re1+ehGtVL6FCKsry1FeKA1R+0rpWmq1LIf33ugsd+ZPBespeIDEZ9YrQPZzAUzdVKl2l66qI0jOKTyFZ5Ip5GRbrcefiXbFQlAc+xiBrJZdWqI8sdTTnEh1xc3C1hHwdauoYNEx/qwM7V79UAwBxJ0yFM+w38wPRqC/uJUsJSSjAcxE2OatC/WVUlNY5ZdYpjR+OdkzsQEDL6D0uk3MiilS1DhDRWNf3CJvxmF2jst0oygZyMUC9APavYIiFD9nO5DlKS6Llxj5eWsAqlIttI3NfDRVJfzugV1ay4Zl9LzuSdzybXq2IZyttQlSY7WV8uLr7rpMqQ3M6ivgCTWYfx/DaUs=
-  file: ${PROJECT_NAME}-${TARGET}-amd64
+  file: ${PROJECT_NAME}-${TARGET}-amd64${EXT}
   skip_cleanup: true
   on:
     repo: itsdalmo/ssm-sh
