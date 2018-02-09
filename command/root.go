@@ -16,5 +16,5 @@ type AwsOptions struct {
 
 type TargetOptions struct {
 	Targets    []string `short:"t" long:"target" description:"One or more instance ids to target"`
-	TargetFile string   `long:"target-file" description:"Path to a file containing a list of targets."`
+	TargetFile string   `long:"target-file" description:"Path to a JSON file containing a list of targets."`
 }

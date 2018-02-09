@@ -22,12 +22,10 @@ func (command *RunCommand) Execute(args []string) error {
 	}
 
 	m := manager.NewManager(sess, Command.AwsOpts.Region)
-
-	targets, err := targetFlagHelper(command.TargetOpts)
+	targets, err := setTargets(command.TargetOpts)
 	if err != nil {
 		return errors.Wrap(err, "failed to set targets")
 	}
-	fmt.Printf("Initialized with targets: %s\n", targets)
 	fmt.Printf("Use ctrl-c to abort the command early.\n\n")
 
 	// Start the command

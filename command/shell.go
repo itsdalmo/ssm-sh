@@ -20,13 +20,10 @@ func (command *ShellCommand) Execute([]string) error {
 	}
 
 	m := manager.NewManager(sess, Command.AwsOpts.Region)
-
-	targets, err := targetFlagHelper(command.TargetOpts)
+	targets, err := setTargets(command.TargetOpts)
 	if err != nil {
 		return errors.Wrap(err, "failed to set targets")
 	}
-
-	fmt.Printf("Initialized with targets: %s\n", targets)
 	fmt.Printf("Type 'exit' to exit. Use ctrl-c to abort running commands.\n\n")
 
 	// (Parent) Context for the main thread and output channel

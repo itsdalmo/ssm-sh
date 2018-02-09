@@ -2,6 +2,8 @@ package command
 
 import (
 	"bufio"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/fatih/color"
@@ -30,22 +32,77 @@ func newSession() (*session.Session, error) {
 	return sess, nil
 }
 
-// Combine target flags
-func targetFlagHelper(opts TargetOptions) ([]string, error) {
+// Set targets
+func setTargets(options TargetOptions) ([]string, error) {
+	var instances []manager.Instance
 	var targets []string
-	targets = opts.Targets
-
-	if opts.TargetFile != "" {
-		content, err := ioutil.ReadFile(opts.TargetFile)
+	if options.TargetFile != "" {
+		content, err := ioutil.ReadFile(options.TargetFile)
 		if err != nil {
 			return nil, err
 		}
-		lines := strings.TrimSpace(string(content))
-		for _, line := range strings.Split(lines, "\n") {
-			targets = append(targets, line)
+		if err := json.Unmarshal(content, &instances); err != nil {
+			return nil, err
+		}
+		for _, instance := range instances {
+			targets = append(targets, instance.ID())
 		}
 	}
+
+	for _, target := range options.Targets {
+		targets = append(targets, target)
+	}
+
+	if len(targets) == 0 {
+		return nil, errors.New("no targets set")
+	}
+
+	fmt.Printf("Initialized with targets: %s\n", targets)
+
 	return targets, nil
+
+}
+
+func interruptHandler() <-chan bool {
+	abort := make(chan bool)
+	sigterm := make(chan os.Signal)
+	signal.Notify(sigterm, os.Interrupt)
+
+	go func() {
+		defer signal.Stop(sigterm)
+		defer close(sigterm)
+		defer close(abort)
+
+		// Use a threshold for time since last signal
+		// to avoid multiple SIGTERM when pressing ctrl+c
+		// on a keyboard.
+		var last time.Time
+		threshold := 50 * time.Millisecond
+
+		for range sigterm {
+			if time.Since(last) < threshold {
+				continue
+			}
+			abort <- true
+			last = time.Now()
+		}
+	}()
+	return abort
+}
+
+func userPrompt(r *bufio.Reader) string {
+	for {
+		fmt.Print("$ ")
+		command, err := r.ReadString('\n')
+		if err != nil {
+			continue
+		}
+		cmd := strings.TrimSpace(command)
+		if cmd == "" {
+			continue
+		}
+		return cmd
+	}
 }
 
 // PrintCommandOutput writes the output from command invocations.
@@ -93,44 +150,9 @@ func PrintInstances(wrt io.Writer, instances []*manager.Instance) error {
 
 }
 
-func interruptHandler() <-chan bool {
-	abort := make(chan bool)
-	sigterm := make(chan os.Signal)
-	signal.Notify(sigterm, os.Interrupt)
-
-	go func() {
-		defer signal.Stop(sigterm)
-		defer close(sigterm)
-		defer close(abort)
-
-		// Use a threshold for time since last signal
-		// to avoid multiple SIGTERM when pressing ctrl+c
-		// on a keyboard.
-		var last time.Time
-		threshold := 50 * time.Millisecond
-
-		for range sigterm {
-			if time.Since(last) < threshold {
-				continue
-			}
-			abort <- true
-			last = time.Now()
-		}
-	}()
-	return abort
-}
-
-func userPrompt(r *bufio.Reader) string {
-	for {
-		fmt.Print("$ ")
-		command, err := r.ReadString('\n')
-		if err != nil {
-			continue
-		}
-		cmd := strings.TrimSpace(command)
-		if cmd == "" {
-			continue
-		}
-		return cmd
-	}
+// WriteInstances writes the output of ListInstances to a file as JSON.
+func WriteInstances(wrt io.Writer, instances []*manager.Instance) error {
+	w := json.NewEncoder(wrt)
+	err := w.Encode(instances)
+	return err
 }

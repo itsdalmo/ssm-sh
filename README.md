@@ -65,7 +65,8 @@ $ ssm-sh list --help
 
 ...
 [list command options]
-      -l, --limit= Limit the number of instances printed (default: 50)
+      -l, --limit=  Limit the number of instances printed (default: 50)
+      -o, --output= Path to a file where the list of instances will be written as YAML.[list command options]
 ```
 
 ## Run/shell usage
@@ -75,20 +76,21 @@ $ ssm-sh run --help
 
 ...
 [run command options]
-      -t, --target=      One or more instance ids to target
-          --target-file= Path to a file containing a list of targets.
       -i, --timeout=     Seconds to wait for command result before timing out. (default: 30)
+      -t, --target=      One or more instance ids to target
+          --target-file= Path to a JSON file containing a list of targets.
 ```
 
 ### Example
 
 ```bash
-$ vaulted -n lab-admin -- ssm-sh list
+$ vaulted -n lab-admin -- ssm-sh list -o example.json
+
 Instance ID         | Name                             | State   | Image ID     | Platform     | Version | IP            | Status | Last pinged
 i-03762678c45546813 | ssm-manager-manual-test-kristian | running | ami-db1688a2 | Amazon Linux | 2.0     | 172.53.17.163 | Online | 2018-02-09 12:37
 i-0d04464ff18b5db7d | ssm-manager-manual-test-kristian | running | ami-db1688a2 | Amazon Linux | 2.0     | 172.53.20.172 | Online | 2018-02-09 12:39
 
-$ vaulted -n lab-admin -- ssm-sh shell -t i-03762678c45546813 -t i-0d04464ff18b5db7d
+$ vaulted -n lab-admin -- ssm-sh shell --target-file example.json
 Initialized with targets: [i-03762678c45546813 i-0d04464ff18b5db7d]
 Type 'exit' to exit. Use ctrl-c to abort running commands.
 

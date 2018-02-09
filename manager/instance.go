@@ -33,15 +33,15 @@ func NewInstance(ssmInstance *ssm.InstanceInformation, ec2Instance *ec2.Instance
 // as collected from SSM and EC2 endpoints. And does not user pointers
 // for all values.
 type Instance struct {
-	InstanceID       string
-	Name             string
-	State            string
-	ImageID          string
-	PlatformName     string
-	PlatformVersion  string
-	IPAddress        string
-	PingStatus       string
-	LastPingDateTime time.Time
+	InstanceID       string    `json:"instanceId"`
+	Name             string    `json:"name"`
+	State            string    `json:"state"`
+	ImageID          string    `json:"imageId"`
+	PlatformName     string    `json:"platformName"`
+	PlatformVersion  string    `json:"platformVersion"`
+	IPAddress        string    `json:"ipAddress"`
+	PingStatus       string    `json:"pingStatus"`
+	LastPingDateTime time.Time `json:"lastPingDateTime"`
 }
 
 // ID returns the InstanceID of an Instance.
