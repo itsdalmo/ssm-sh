@@ -41,7 +41,7 @@ which ssm-sh
 # Should point to $GOPATH/bin/ssm-sh
 ```
 
-### Usage
+## Usage
 
 ```bash
 $ ssm-sh --help
@@ -62,7 +62,7 @@ Available commands:
   shell  Start an interactive shell. (aliases: sh)
 ```
 
-### List usage
+#### List usage
 
 ```bash
 $ ssm-sh list --help
@@ -74,7 +74,7 @@ $ ssm-sh list --help
       -o, --output= Path to a file where the list of instances will be written as YAML.[list command options]
 ```
 
-## Run/shell usage
+#### Run/shell usage
 
 ```bash
 $ ssm-sh run --help
@@ -86,7 +86,7 @@ $ ssm-sh run --help
           --target-file= Path to a JSON file containing a list of targets.
 ```
 
-### Example
+## Example
 
 ```bash
 $ vaulted -n lab-admin -- ssm-sh list --filter Name="*itsdalmo" -o example.json
