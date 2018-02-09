@@ -105,7 +105,7 @@ func TestList(t *testing.T) {
 
 	t.Run("Get managed instances works", func(t *testing.T) {
 		expected := outputInstances
-		actual, err := m.ListInstances(50)
+		actual, err := m.ListInstances(50, nil)
 		assert.Nil(t, err)
 		assert.NotNil(t, actual)
 		assert.Equal(t, expected, actual)
@@ -113,7 +113,7 @@ func TestList(t *testing.T) {
 
 	t.Run("Limit number of instances works", func(t *testing.T) {
 		expected := outputInstances[:1]
-		actual, err := m.ListInstances(1)
+		actual, err := m.ListInstances(1, nil)
 		assert.Nil(t, err)
 		assert.NotNil(t, actual)
 		assert.Equal(t, expected, actual)
@@ -126,7 +126,22 @@ func TestList(t *testing.T) {
 		}()
 
 		expected := outputInstances
-		actual, err := m.ListInstances(50)
+		actual, err := m.ListInstances(50, nil)
+		assert.Nil(t, err)
+		assert.NotNil(t, actual)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("TagFilter works", func(t *testing.T) {
+		expected := outputInstances[:1]
+		actual, err := m.ListInstances(50, []*manager.TagFilter{
+			{
+				Key: "Name",
+				Values: []string{
+					"1",
+				},
+			},
+		})
 		assert.Nil(t, err)
 		assert.NotNil(t, actual)
 		assert.Equal(t, expected, actual)
@@ -138,7 +153,7 @@ func TestList(t *testing.T) {
 			ssmMock.Error = false
 		}()
 
-		actual, err := m.ListInstances(50)
+		actual, err := m.ListInstances(50, nil)
 		assert.NotNil(t, err)
 		assert.EqualError(t, err, "failed to describe instance information: expected")
 		assert.Nil(t, actual)

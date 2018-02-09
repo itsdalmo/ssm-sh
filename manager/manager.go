@@ -18,6 +18,28 @@ import (
 	"time"
 )
 
+// TagFilter represents a key=value pair for AWS EC2 tags.
+type TagFilter struct {
+	Key    string
+	Values []string
+}
+
+// Filter returns the ec2.Filter representation of the TagFilter.
+func (t *TagFilter) Filter() *ec2.Filter {
+	return &ec2.Filter{
+		Name:   aws.String(fmt.Sprintf("tag:%s", t.Key)),
+		Values: aws.StringSlice(t.Values),
+	}
+}
+
+// CommandOutput is the return type transmitted over a channel when fetching output.
+type CommandOutput struct {
+	InstanceID string
+	Status     string
+	Output     string
+	Error      error
+}
+
 // Manager handles the clients interfacing with AWS.
 type Manager struct {
 	ssmClient ssmiface.SSMAPI
@@ -48,7 +70,7 @@ func NewTestManager(ssm ssmiface.SSMAPI, s3 s3iface.S3API, ec2 ec2iface.EC2API) 
 }
 
 // ListInstances fetches a list of instances managed by SSM. Paginates until all responses have been collected.
-func (m *Manager) ListInstances(limit int64) ([]*Instance, error) {
+func (m *Manager) ListInstances(limit int64, tagFilters []*TagFilter) ([]*Instance, error) {
 	var out []*Instance
 
 	input := &ssm.DescribeInstanceInformationInput{
@@ -60,7 +82,7 @@ func (m *Manager) ListInstances(limit int64) ([]*Instance, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to describe instance information")
 		}
-		ssmInstances, ec2Instances, err := m.describeInstances(response.InstanceInformationList)
+		ssmInstances, ec2Instances, err := m.describeInstances(response.InstanceInformationList, tagFilters)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to retrieve ec2 instance information")
 		}
@@ -79,25 +101,29 @@ func (m *Manager) ListInstances(limit int64) ([]*Instance, error) {
 }
 
 // describeInstances retrieves additional information about SSM managed instances from EC2.
-func (m *Manager) describeInstances(instances []*ssm.InstanceInformation) (map[string]*ssm.InstanceInformation, map[string]*ec2.Instance, error) {
+func (m *Manager) describeInstances(instances []*ssm.InstanceInformation, tagFilters []*TagFilter) (map[string]*ssm.InstanceInformation, map[string]*ec2.Instance, error) {
 	var ids []*string
+	var filters []*ec2.Filter
 
 	org := make(map[string]*ssm.InstanceInformation)
 	out := make(map[string]*ec2.Instance)
 
 	for _, instance := range instances {
-		id := aws.StringValue(instance.InstanceId)
-		org[id] = instance
+		org[aws.StringValue(instance.InstanceId)] = instance
 		ids = append(ids, instance.InstanceId)
 	}
 
+	filters = append(filters, &ec2.Filter{
+		Name:   aws.String("instance-id"),
+		Values: ids,
+	})
+
+	for _, f := range tagFilters {
+		filters = append(filters, f.Filter())
+	}
+
 	input := &ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
-			{
-				Name:   aws.String("instance-id"),
-				Values: ids,
-			},
-		},
+		Filters: filters,
 	}
 
 	for {
@@ -147,14 +173,6 @@ func (m *Manager) AbortCommand(instanceIds []string, commandID string) error {
 		return err
 	}
 	return nil
-}
-
-// CommandOutput is the return type transmitted over a channel when fetching output.
-type CommandOutput struct {
-	InstanceID string
-	Status     string
-	Output     string
-	Error      error
 }
 
 // GetCommandOutput fetches the results from a command invocation for all specified instanceIds and

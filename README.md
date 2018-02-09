@@ -65,6 +65,7 @@ $ ssm-sh list --help
 
 ...
 [list command options]
+      -f, --filter= Filter the produced list by tag (key=value,..)
       -l, --limit=  Limit the number of instances printed (default: 50)
       -o, --output= Path to a file where the list of instances will be written as YAML.[list command options]
 ```
@@ -84,11 +85,11 @@ $ ssm-sh run --help
 ### Example
 
 ```bash
-$ vaulted -n lab-admin -- ssm-sh list -o example.json
+$ vaulted -n lab-admin -- ssm-sh list --filter Name="*itsdalmo" -o example.json
 
 Instance ID         | Name                             | State   | Image ID     | Platform     | Version | IP            | Status | Last pinged
-i-03762678c45546813 | ssm-manager-manual-test-kristian | running | ami-db1688a2 | Amazon Linux | 2.0     | 172.53.17.163 | Online | 2018-02-09 12:37
-i-0d04464ff18b5db7d | ssm-manager-manual-test-kristian | running | ami-db1688a2 | Amazon Linux | 2.0     | 172.53.20.172 | Online | 2018-02-09 12:39
+i-03762678c45546813 | ssm-manager-manual-test-itsdalmo | running | ami-db1688a2 | Amazon Linux | 2.0     | 172.53.17.163 | Online | 2018-02-09 12:37
+i-0d04464ff18b5db7d | ssm-manager-manual-test-itsdalmo | running | ami-db1688a2 | Amazon Linux | 2.0     | 172.53.20.172 | Online | 2018-02-09 12:39
 
 $ vaulted -n lab-admin -- ssm-sh shell --target-file example.json
 Initialized with targets: [i-03762678c45546813 i-0d04464ff18b5db7d]

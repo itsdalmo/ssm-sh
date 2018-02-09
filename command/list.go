@@ -6,9 +6,11 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
+	"strings"
 )
 
 type ListCommand struct {
+	Tags   []*tag `short:"f" long:"filter" description:"Filter the produced list by tag (key=value,..)"`
 	Limit  int64  `short:"l" long:"limit" description:"Limit the number of instances printed" default:"50"`
 	Output string `short:"o" long:"output" description:"Path to a file where the list of instances will be written as JSON."`
 }
@@ -20,7 +22,14 @@ func (command *ListCommand) Execute([]string) error {
 	}
 	m := manager.NewManager(sess, Command.AwsOpts.Region)
 
-	instances, err := m.ListInstances(command.Limit)
+	var filters []*manager.TagFilter
+	for _, tag := range command.Tags {
+		filters = append(filters, &manager.TagFilter{
+			Key:    tag.Key,
+			Values: tag.Values,
+		})
+	}
+	instances, err := m.ListInstances(command.Limit, filters)
 	if err != nil {
 		return errors.Wrap(err, "failed to list instances")
 	}
@@ -38,6 +47,25 @@ func (command *ListCommand) Execute([]string) error {
 			return errors.Wrap(err, "failed to write output")
 		}
 	}
+
+	return nil
+}
+
+type tag manager.TagFilter
+
+func (t *tag) UnmarshalFlag(value string) error {
+	parts := strings.Split(value, "=")
+	if len(parts) != 2 {
+		return errors.New("expected a key and a value separated by =")
+	}
+
+	values := strings.Split(parts[1], ",")
+	if len(values) < 1 {
+		return errors.New("expected one or more values separated by ,")
+	}
+
+	t.Key = parts[0]
+	t.Values = values
 
 	return nil
 }

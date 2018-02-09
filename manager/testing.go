@@ -26,20 +26,59 @@ func (mock *MockEC2) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.
 		return nil, errors.New("expected")
 	}
 
+	var out []*ec2.Instance
+	var tmp []*ec2.Instance
 	var ids []string
+	var nameFilters []string
+
 	for _, filter := range input.Filters {
-		if aws.StringValue(filter.Name) == "instance-id" {
+		key := aws.StringValue(filter.Name)
+		if key == "instance-id" {
 			ids = aws.StringValueSlice(filter.Values)
+		} else if key == "tag:Name" {
+			nameFilters = aws.StringValueSlice(filter.Values)
 		}
 	}
 
-	if ids == nil {
-		return nil, errors.New("missing instance ids in input")
+	// Filter instance ids if a list was provided. If not, we
+	// provide the entire list of instances.
+	if ids != nil {
+		for _, id := range ids {
+			instance, ok := mock.Instances[id]
+			if !ok {
+				return nil, errors.New("instance id does not exist")
+			}
+			tmp = append(tmp, instance)
+		}
+
+	} else {
+		for _, instance := range mock.Instances {
+			tmp = append(tmp, instance)
+		}
 	}
 
-	var out []*ec2.Instance
-	for _, id := range ids {
-		out = append(out, mock.Instances[id])
+	// If a tag filter was supplied (only Name is supported for testing),
+	// filter instances which don't match.
+	if nameFilters != nil && len(nameFilters) > 0 {
+		for _, instance := range tmp {
+			for _, tag := range instance.Tags {
+				// Look for Name tag.
+				if aws.StringValue(tag.Key) != "Name" {
+					continue
+				}
+				// Once it is found, check whether it contains
+				// any of the name filters (simple contains).
+				name := aws.StringValue(tag.Value)
+				for _, filter := range nameFilters {
+					if strings.Contains(name, filter) {
+						out = append(out, instance)
+					}
+				}
+			}
+		}
+
+	} else {
+		out = tmp
 	}
 
 	// NOTE: It should not matter if we have multiple reservations
