@@ -73,6 +73,7 @@ func PrintInstances(wrt io.Writer, instances []*manager.Instance) error {
 		"Platform",
 		"Version",
 		"IP",
+		"Status",
 		"Last pinged",
 	}
 

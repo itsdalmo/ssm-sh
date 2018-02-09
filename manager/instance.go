@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"strings"
 	"time"
@@ -9,11 +10,12 @@ import (
 // NewInstance creates a new Instance from ssm.InstanceInformation.
 func NewInstance(in *ssm.InstanceInformation) *Instance {
 	return &Instance{
-		InstanceID:       *in.InstanceId,
-		PlatformName:     *in.PlatformName,
-		PlatformVersion:  *in.PlatformVersion,
-		IPAddress:        *in.IPAddress,
-		LastPingDateTime: *in.LastPingDateTime,
+		InstanceID:       aws.StringValue(in.InstanceId),
+		PlatformName:     aws.StringValue(in.PlatformName),
+		PlatformVersion:  aws.StringValue(in.PlatformVersion),
+		IPAddress:        aws.StringValue(in.IPAddress),
+		PingStatus:       aws.StringValue(in.PingStatus),
+		LastPingDateTime: aws.TimeValue(in.LastPingDateTime),
 	}
 }
 
@@ -24,6 +26,7 @@ type Instance struct {
 	PlatformName     string
 	PlatformVersion  string
 	IPAddress        string
+	PingStatus       string
 	LastPingDateTime time.Time
 }
 
@@ -43,7 +46,8 @@ func (i *Instance) TabString() string {
 		i.PlatformName,
 		i.PlatformVersion,
 		i.IPAddress,
-		i.LastPingDateTime.Format("2006-01-02"),
+		i.PingStatus,
+		i.LastPingDateTime.Format("2006-01-02 15:04"),
 	}
 	return strings.Join(fields, tab+del+tab)
 }

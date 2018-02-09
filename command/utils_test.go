@@ -18,22 +18,24 @@ func TestPrintInstances(t *testing.T) {
 			PlatformName:     "Amazon Linux",
 			PlatformVersion:  "1.0",
 			IPAddress:        "10.0.0.1",
-			LastPingDateTime: time.Date(2018, time.January, 27, 0, 0, 0, 0, time.UTC),
+			PingStatus:       "Online",
+			LastPingDateTime: time.Date(2018, time.January, 27, 13, 32, 0, 0, time.UTC),
 		},
 		{
 			InstanceID:       "i-00000000000000002",
 			PlatformName:     "Amazon Linux 2",
 			PlatformVersion:  "2.0",
 			IPAddress:        "10.0.0.100",
-			LastPingDateTime: time.Date(2018, time.January, 30, 0, 0, 0, 0, time.UTC),
+			PingStatus:       "Online",
+			LastPingDateTime: time.Date(2018, time.January, 30, 13, 32, 0, 0, time.UTC),
 		},
 	}
 
 	t.Run("Print works", func(t *testing.T) {
 		expected := strings.TrimSpace(`
-Instance ID         | Platform       | Version | IP         | Last pinged
-i-00000000000000001 | Amazon Linux   | 1.0     | 10.0.0.1   | 2018-01-27
-i-00000000000000002 | Amazon Linux 2 | 2.0     | 10.0.0.100 | 2018-01-30
+Instance ID         | Platform       | Version | IP         | Status | Last pinged
+i-00000000000000001 | Amazon Linux   | 1.0     | 10.0.0.1   | Online | 2018-01-27 13:32
+i-00000000000000002 | Amazon Linux 2 | 2.0     | 10.0.0.100 | Online | 2018-01-30 13:32
 `)
 
 		b := new(bytes.Buffer)
