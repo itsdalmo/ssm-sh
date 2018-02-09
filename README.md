@@ -9,7 +9,11 @@ remote instances and fetching the output.
 
 Grab a binary from the [releases](https://github.com/itsdalmo/ssm-sh/releases).
 
-### Manually
+#### Docker
+
+There is also a docker image [here](https://hub.docker.com/r/itsdalmo/ssm-sh/).
+
+#### Manual install
 
 Have Go installed:
 
