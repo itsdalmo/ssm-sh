@@ -22,6 +22,7 @@
     "aws/signer/v4",
     "internal/shareddefaults",
     "private/protocol",
+    "private/protocol/ec2query",
     "private/protocol/json/jsonutil",
     "private/protocol/jsonrpc",
     "private/protocol/query",
@@ -29,6 +30,8 @@
     "private/protocol/rest",
     "private/protocol/restxml",
     "private/protocol/xml/xmlutil",
+    "service/ec2",
+    "service/ec2/ec2iface",
     "service/s3",
     "service/s3/s3iface",
     "service/ssm",
@@ -106,6 +109,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1d5656a92f1a45b196c231f2a4598eff5c916444ce4b81530142d53fd9727bde"
+  inputs-digest = "eb74183a3db2882eadba139b804df752c58fa323d579594be4f8a92dd80f2c6c"
   solver-name = "gps-cdcl"
   solver-version = 1

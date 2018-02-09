@@ -2,27 +2,41 @@ package manager
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"strings"
 	"time"
 )
 
 // NewInstance creates a new Instance from ssm.InstanceInformation.
-func NewInstance(in *ssm.InstanceInformation) *Instance {
+func NewInstance(ssmInstance *ssm.InstanceInformation, ec2Instance *ec2.Instance) *Instance {
+	var name string
+	for _, tag := range ec2Instance.Tags {
+		if aws.StringValue(tag.Key) == "Name" {
+			name = aws.StringValue(tag.Value)
+		}
+	}
 	return &Instance{
-		InstanceID:       aws.StringValue(in.InstanceId),
-		PlatformName:     aws.StringValue(in.PlatformName),
-		PlatformVersion:  aws.StringValue(in.PlatformVersion),
-		IPAddress:        aws.StringValue(in.IPAddress),
-		PingStatus:       aws.StringValue(in.PingStatus),
-		LastPingDateTime: aws.TimeValue(in.LastPingDateTime),
+		InstanceID:       aws.StringValue(ssmInstance.InstanceId),
+		Name:             name,
+		State:            aws.StringValue(ec2Instance.State.Name),
+		ImageID:          aws.StringValue(ec2Instance.ImageId),
+		PlatformName:     aws.StringValue(ssmInstance.PlatformName),
+		PlatformVersion:  aws.StringValue(ssmInstance.PlatformVersion),
+		IPAddress:        aws.StringValue(ssmInstance.IPAddress),
+		PingStatus:       aws.StringValue(ssmInstance.PingStatus),
+		LastPingDateTime: aws.TimeValue(ssmInstance.LastPingDateTime),
 	}
 }
 
-// Instance is a replacement for ssm.InstanceInformation which
-// does not use pointers for all values.
+// Instance describes relevant information about an instance-id
+// as collected from SSM and EC2 endpoints. And does not user pointers
+// for all values.
 type Instance struct {
 	InstanceID       string
+	Name             string
+	State            string
+	ImageID          string
 	PlatformName     string
 	PlatformVersion  string
 	IPAddress        string
@@ -43,6 +57,9 @@ func (i *Instance) TabString() string {
 
 	fields := []string{
 		i.InstanceID,
+		i.Name,
+		i.State,
+		i.ImageID,
 		i.PlatformName,
 		i.PlatformVersion,
 		i.IPAddress,

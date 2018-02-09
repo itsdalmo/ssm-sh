@@ -84,9 +84,9 @@ $ ssm-sh run --help
 
 ```bash
 $ vaulted -n lab-admin -- ssm-sh list
-Instance ID         | Platform     | Version | IP            | Last pinged
-i-03762678c45546813 | Amazon Linux | 2.0     | 172.53.17.163 | 2018-02-06
-i-0d04464ff18b5db7d | Amazon Linux | 2.0     | 172.53.20.172 | 2018-02-06
+Instance ID         | Name                             | State   | Image ID     | Platform     | Version | IP            | Status | Last pinged
+i-03762678c45546813 | ssm-manager-manual-test-kristian | running | ami-db1688a2 | Amazon Linux | 2.0     | 172.53.17.163 | Online | 2018-02-09 12:37
+i-0d04464ff18b5db7d | ssm-manager-manual-test-kristian | running | ami-db1688a2 | Amazon Linux | 2.0     | 172.53.20.172 | Online | 2018-02-09 12:39
 
 $ vaulted -n lab-admin -- ssm-sh shell -t i-03762678c45546813 -t i-0d04464ff18b5db7d
 Initialized with targets: [i-03762678c45546813 i-0d04464ff18b5db7d]

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -12,6 +14,45 @@ import (
 	"strings"
 	"sync"
 )
+
+type MockEC2 struct {
+	ec2iface.EC2API
+	Instances map[string]*ec2.Instance
+	Error     bool
+}
+
+func (mock *MockEC2) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+	if mock.Error {
+		return nil, errors.New("expected")
+	}
+
+	var ids []string
+	for _, filter := range input.Filters {
+		if aws.StringValue(filter.Name) == "instance-id" {
+			ids = aws.StringValueSlice(filter.Values)
+		}
+	}
+
+	if ids == nil {
+		return nil, errors.New("missing instance ids in input")
+	}
+
+	var out []*ec2.Instance
+	for _, id := range ids {
+		out = append(out, mock.Instances[id])
+	}
+
+	// NOTE: It should not matter if we have multiple reservations
+	// and/or multiple instances per reservation.
+	return &ec2.DescribeInstancesOutput{
+		Reservations: []*ec2.Reservation{
+			{
+				Instances: out,
+			},
+		},
+		NextToken: nil,
+	}, nil
+}
 
 type MockSSM struct {
 	ssmiface.SSMAPI

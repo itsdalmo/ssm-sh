@@ -70,6 +70,9 @@ func PrintInstances(wrt io.Writer, instances []*manager.Instance) error {
 	w := tabwriter.NewWriter(wrt, 0, 8, 1, ' ', 0)
 	header := []string{
 		"Instance ID",
+		"Name",
+		"State",
+		"Image ID",
 		"Platform",
 		"Version",
 		"IP",

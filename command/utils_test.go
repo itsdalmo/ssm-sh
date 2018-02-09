@@ -15,6 +15,9 @@ func TestPrintInstances(t *testing.T) {
 	input := []*manager.Instance{
 		{
 			InstanceID:       "i-00000000000000001",
+			Name:             "instance 1",
+			State:            "running",
+			ImageID:          "ami-db000001",
 			PlatformName:     "Amazon Linux",
 			PlatformVersion:  "1.0",
 			IPAddress:        "10.0.0.1",
@@ -23,6 +26,9 @@ func TestPrintInstances(t *testing.T) {
 		},
 		{
 			InstanceID:       "i-00000000000000002",
+			Name:             "instance 2",
+			State:            "running",
+			ImageID:          "ami-db000002",
 			PlatformName:     "Amazon Linux 2",
 			PlatformVersion:  "2.0",
 			IPAddress:        "10.0.0.100",
@@ -33,9 +39,9 @@ func TestPrintInstances(t *testing.T) {
 
 	t.Run("Print works", func(t *testing.T) {
 		expected := strings.TrimSpace(`
-Instance ID         | Platform       | Version | IP         | Status | Last pinged
-i-00000000000000001 | Amazon Linux   | 1.0     | 10.0.0.1   | Online | 2018-01-27 13:32
-i-00000000000000002 | Amazon Linux 2 | 2.0     | 10.0.0.100 | Online | 2018-01-30 13:32
+Instance ID         | Name       | State   | Image ID     | Platform       | Version | IP         | Status | Last pinged
+i-00000000000000001 | instance 1 | running | ami-db000001 | Amazon Linux   | 1.0     | 10.0.0.1   | Online | 2018-01-27 13:32
+i-00000000000000002 | instance 2 | running | ami-db000002 | Amazon Linux 2 | 2.0     | 10.0.0.100 | Online | 2018-01-30 13:32
 `)
 
 		b := new(bytes.Buffer)

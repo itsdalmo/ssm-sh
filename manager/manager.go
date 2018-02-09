@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -20,6 +22,7 @@ import (
 type Manager struct {
 	ssmClient ssmiface.SSMAPI
 	s3Client  s3iface.S3API
+	ec2Client ec2iface.EC2API
 	region    string
 }
 
@@ -29,15 +32,17 @@ func NewManager(sess *session.Session, region string) *Manager {
 	return &Manager{
 		ssmClient: ssm.New(sess, config),
 		s3Client:  s3.New(sess, config),
+		ec2Client: ec2.New(sess, config),
 		region:    region,
 	}
 }
 
 // NewTestManager creates a new manager for testing purposes.
-func NewTestManager(ssm ssmiface.SSMAPI, s3 s3iface.S3API) *Manager {
+func NewTestManager(ssm ssmiface.SSMAPI, s3 s3iface.S3API, ec2 ec2iface.EC2API) *Manager {
 	return &Manager{
 		ssmClient: ssm,
 		s3Client:  s3,
+		ec2Client: ec2,
 		region:    "eu-west-1",
 	}
 }
@@ -55,8 +60,14 @@ func (m *Manager) ListInstances(limit int64) ([]*Instance, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to describe instance information")
 		}
-		for _, instance := range response.InstanceInformationList {
-			out = append(out, NewInstance(instance))
+		ssmInstances, ec2Instances, err := m.describeInstances(response.InstanceInformationList)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to retrieve ec2 instance information")
+		}
+
+		// NOTE: ec2Info will be a shorter list when filtering is applied.
+		for k := range ec2Instances {
+			out = append(out, NewInstance(ssmInstances[k], ec2Instances[k]))
 		}
 		if response.NextToken == nil {
 			break
@@ -65,6 +76,48 @@ func (m *Manager) ListInstances(limit int64) ([]*Instance, error) {
 	}
 
 	return out, nil
+}
+
+// describeInstances retrieves additional information about SSM managed instances from EC2.
+func (m *Manager) describeInstances(instances []*ssm.InstanceInformation) (map[string]*ssm.InstanceInformation, map[string]*ec2.Instance, error) {
+	var ids []*string
+
+	org := make(map[string]*ssm.InstanceInformation)
+	out := make(map[string]*ec2.Instance)
+
+	for _, instance := range instances {
+		id := aws.StringValue(instance.InstanceId)
+		org[id] = instance
+		ids = append(ids, instance.InstanceId)
+	}
+
+	input := &ec2.DescribeInstancesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("instance-id"),
+				Values: ids,
+			},
+		},
+	}
+
+	for {
+		response, err := m.ec2Client.DescribeInstances(input)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, reservation := range response.Reservations {
+			for _, instance := range reservation.Instances {
+				id := aws.StringValue(instance.InstanceId)
+				out[id] = instance
+			}
+		}
+		if response.NextToken == nil {
+			break
+		}
+		input.NextToken = response.NextToken
+	}
+
+	return org, out, nil
 }
 
 // RunCommand on the given instance ids.

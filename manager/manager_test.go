@@ -3,6 +3,7 @@ package manager_test
 import (
 	"context"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/itsdalmo/ssm-sh/manager"
 	"github.com/stretchr/testify/assert"
@@ -11,7 +12,7 @@ import (
 )
 
 var (
-	inputInstances = []*ssm.InstanceInformation{
+	ssmInstances = []*ssm.InstanceInformation{
 		{
 			InstanceId:       aws.String("i-00000000000000001"),
 			PlatformName:     aws.String("Amazon Linux"),
@@ -30,9 +31,37 @@ var (
 		},
 	}
 
+	ec2Instances = map[string]*ec2.Instance{
+		"i-00000000000000001": {
+			InstanceId: aws.String("i-00000000000000001"),
+			ImageId:    aws.String("ami-db000001"),
+			State:      &ec2.InstanceState{Name: aws.String("running")},
+			Tags: []*ec2.Tag{
+				{
+					Key:   aws.String("Name"),
+					Value: aws.String("instance 1"),
+				},
+			},
+		},
+		"i-00000000000000002": {
+			InstanceId: aws.String("i-00000000000000002"),
+			ImageId:    aws.String("ami-db000002"),
+			State:      &ec2.InstanceState{Name: aws.String("running")},
+			Tags: []*ec2.Tag{
+				{
+					Key:   aws.String("Name"),
+					Value: aws.String("instance 2"),
+				},
+			},
+		},
+	}
+
 	outputInstances = []*manager.Instance{
 		{
 			InstanceID:       "i-00000000000000001",
+			Name:             "instance 1",
+			State:            "running",
+			ImageID:          "ami-db000001",
 			PlatformName:     "Amazon Linux",
 			PlatformVersion:  "1.0",
 			IPAddress:        "10.0.0.1",
@@ -41,6 +70,9 @@ var (
 		},
 		{
 			InstanceID:       "i-00000000000000002",
+			Name:             "instance 2",
+			State:            "running",
+			ImageID:          "ami-db000002",
 			PlatformName:     "Amazon Linux 2",
 			PlatformVersion:  "2.0",
 			IPAddress:        "10.0.0.100",
@@ -59,13 +91,17 @@ func TestList(t *testing.T) {
 			Command *ssm.Command
 			Status  string
 		}{},
-		Instances: inputInstances,
+		Instances: ssmInstances,
 	}
 	s3Mock := &manager.MockS3{
 		Error: false,
 	}
+	ec2Mock := &manager.MockEC2{
+		Error:     false,
+		Instances: ec2Instances,
+	}
 
-	m := manager.NewTestManager(ssmMock, s3Mock)
+	m := manager.NewTestManager(ssmMock, s3Mock, ec2Mock)
 
 	t.Run("Get managed instances works", func(t *testing.T) {
 		expected := outputInstances
@@ -118,13 +154,17 @@ func TestRunCommand(t *testing.T) {
 			Command *ssm.Command
 			Status  string
 		}{},
-		Instances: inputInstances,
+		Instances: ssmInstances,
 	}
 	s3Mock := &manager.MockS3{
 		Error: false,
 	}
+	ec2Mock := &manager.MockEC2{
+		Error:     false,
+		Instances: ec2Instances,
+	}
 
-	m := manager.NewTestManager(ssmMock, s3Mock)
+	m := manager.NewTestManager(ssmMock, s3Mock, ec2Mock)
 
 	var targets []string
 	for _, instance := range ssmMock.Instances {
@@ -161,13 +201,17 @@ func TestAbortCommand(t *testing.T) {
 			Command *ssm.Command
 			Status  string
 		}{},
-		Instances: inputInstances,
+		Instances: ssmInstances,
 	}
 	s3Mock := &manager.MockS3{
 		Error: false,
 	}
+	ec2Mock := &manager.MockEC2{
+		Error:     false,
+		Instances: ec2Instances,
+	}
 
-	m := manager.NewTestManager(ssmMock, s3Mock)
+	m := manager.NewTestManager(ssmMock, s3Mock, ec2Mock)
 
 	var targets []string
 	for _, instance := range ssmMock.Instances {
@@ -210,13 +254,17 @@ func TestOutput(t *testing.T) {
 			Command *ssm.Command
 			Status  string
 		}{},
-		Instances: inputInstances,
+		Instances: ssmInstances,
 	}
 	s3Mock := &manager.MockS3{
 		Error: false,
 	}
+	ec2Mock := &manager.MockEC2{
+		Error:     false,
+		Instances: ec2Instances,
+	}
 
-	m := manager.NewTestManager(ssmMock, s3Mock)
+	m := manager.NewTestManager(ssmMock, s3Mock, ec2Mock)
 
 	var targets []string
 	for _, instance := range ssmMock.Instances {
