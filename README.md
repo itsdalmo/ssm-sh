@@ -71,7 +71,7 @@ $ ssm-sh list --help
 [list command options]
       -f, --filter= Filter the produced list by tag (key=value,..)
       -l, --limit=  Limit the number of instances printed (default: 50)
-      -o, --output= Path to a file where the list of instances will be written as YAML.[list command options]
+      -o, --output= Path to a file where the list of instances will be written as JSON.
 ```
 
 #### Run/shell usage
