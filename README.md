@@ -115,3 +115,9 @@ ip-172-53-17-163.eu-west-1.compute.internal
 i-0d04464ff18b5db7d - Success:
 ip-172-53-20-172.eu-west-1.compute.internal
 ```
+
+#### Note
+
+If you don't see any instances listed and still want to test `ssm-sh`,
+you can see the [terraform/README.md](./terraform/README.md) for a quick
+way of setting up some test instances.

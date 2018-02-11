@@ -1,0 +1,50 @@
+#cloud-config
+package_update: true
+packages:
+  - awslogs
+  - aws-cfn-bootstrap
+write_files:
+  - path: "/etc/awslogs/awscli.template"
+    permissions: "0644"
+    owner: "root"
+    content: |
+      [plugins]
+      cwlogs = cwlogs
+      [default]
+      region = ${region}
+  - path: "/etc/awslogs/awslogs.template"
+    permissions: "0644"
+    owner: "root"
+    content: |
+      [general]
+      state_file = /var/lib/awslogs/agent-state
+
+      [/var/log/amazon/ssm/amazon-ssm-agent.log]
+      file = /var/log/amazon/ssm/amazon-ssm-agent.log
+      log_group_name = ${log_group_name}
+      log_stream_name = {instance_id}
+  - path: "/usr/local/scripts/cloudformation-signal.sh"
+    permissions: "0744"
+    owner: "root"
+    content: |
+      #! /bin/bash
+
+      set -euo pipefail
+
+      function await_process() {
+        echo -n "Waiting for $1..."
+        while ! pgrep -f "$1" > /dev/null; do
+          sleep 1
+        done
+        echo "Done!"
+      }
+      await_process "/usr/bin/amazon-ssm-agent"
+runcmd:
+  - |
+    cp /etc/awslogs/awscli.template /etc/awslogs/awscli.conf
+    cp /etc/awslogs/awslogs.template /etc/awslogs/awslogs.conf
+  - |
+    systemctl enable awslogsd.service --now
+  - |
+    /usr/local/scripts/cloudformation-signal.sh
+    /opt/aws/bin/cfn-signal -e $? --stack ${stack_name} --resource AutoScalingGroup --region ${region}

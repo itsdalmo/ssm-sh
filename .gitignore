@@ -1,1 +1,4 @@
 ssm-sh*
+*.json
+**/.terraform
+**/*.tfstate*
