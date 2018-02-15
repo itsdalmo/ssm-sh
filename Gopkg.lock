@@ -42,6 +42,12 @@
   version = "v1.12.70"
 
 [[projects]]
+  name = "github.com/chzyer/readline"
+  packages = ["."]
+  revision = "62c6fe6193755f722b8b8788aa7357be55a50ff1"
+  version = "v1.4"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -109,6 +115,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "eb74183a3db2882eadba139b804df752c58fa323d579594be4f8a92dd80f2c6c"
+  inputs-digest = "3a13d0c6e40eb8b9c11127e361a8fad0b9f66efec8bef6ac225253d0b650973a"
   solver-name = "gps-cdcl"
   solver-version = 1

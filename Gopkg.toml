@@ -48,3 +48,7 @@
 [[constraint]]
   name = "github.com/fatih/color"
   version = "1.5.0"
+
+[[constraint]]
+  name = "github.com/chzyer/readline"
+  version = "1.4.0"

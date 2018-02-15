@@ -1,7 +1,6 @@
 package command
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -88,21 +87,6 @@ func interruptHandler() <-chan bool {
 		}
 	}()
 	return abort
-}
-
-func userPrompt(r *bufio.Reader) string {
-	for {
-		fmt.Print("$ ")
-		command, err := r.ReadString('\n')
-		if err != nil {
-			continue
-		}
-		cmd := strings.TrimSpace(command)
-		if cmd == "" {
-			continue
-		}
-		return cmd
-	}
 }
 
 // PrintCommandOutput writes the output from command invocations.
