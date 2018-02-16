@@ -1,12 +1,14 @@
 package command
 
 import (
-	"bufio"
 	"context"
 	"fmt"
+	"github.com/chzyer/readline"
 	"github.com/itsdalmo/ssm-sh/manager"
 	"github.com/pkg/errors"
+	"io"
 	"os"
+	"strings"
 )
 
 type ShellCommand struct {
@@ -34,12 +36,31 @@ func (command *ShellCommand) Execute([]string) error {
 	var interrupts int
 	abort := interruptHandler()
 
-	// Reader for user prompt
-	reader := bufio.NewReader(os.Stdin)
+	// Configure readline
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:          "\033[31m»\033[0m ",
+		HistoryFile:     "/tmp/ssh-sh.tmp",
+		InterruptPrompt: "^C",
+		EOFPrompt:       "^D",
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer rl.Close()
 
 	for {
-		cmd := userPrompt(reader)
-		if cmd == "exit" {
+		cmd, err := rl.Readline()
+
+		if err == readline.ErrInterrupt {
+			continue
+		} else if err == io.EOF {
+			return nil
+		}
+
+		cmd = strings.TrimSpace(cmd)
+		if len(cmd) == 0 {
+			continue
+		} else if cmd == "exit" {
 			return nil
 		}
 
