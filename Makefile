@@ -4,13 +4,14 @@ ARCH ?= amd64
 EXT ?= ""
 DOCKER_REPO=itsdalmo/ssm-sh
 TRAVIS_TAG ?= ref-$(shell git rev-parse --short HEAD)
+LDFLAGS=-ldflags "-X=main.Version=$(TRAVIS_TAG)"
 SRC=$(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 default: test
 
 run: test
 	@echo "== Run =="
-	go run main.go
+	go run $(LDFLAGS) main.go
 
 build: test
 	@echo "== Build =="
@@ -41,6 +42,6 @@ build-docker:
 
 build-release:
 	@echo "== Release build =="
-	CGO_ENABLED=0 GOOS=$(TARGET) GOARCH=$(ARCH) go build -ldflags "-X main.version=$(TRAVIS_TAG)" -o $(BINARY_NAME)-$(TARGET)-$(ARCH)$(EXT) -v
+	CGO_ENABLED=0 GOOS=$(TARGET) GOARCH=$(ARCH) go build $(LDFLAGS) -o $(BINARY_NAME)-$(TARGET)-$(ARCH)$(EXT) -v
 
 .PHONY: default build test build-docker run-docker build-release

@@ -6,7 +6,7 @@ import (
 )
 
 // CommandVersion (overridden in main.go)
-var CommandVersion string
+var CommandVersion = "unknown"
 
 func init() {
 	Command.Version = func() {
