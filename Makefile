@@ -4,7 +4,7 @@ ARCH ?= amd64
 EXT ?= ""
 DOCKER_REPO=itsdalmo/ssm-sh
 TRAVIS_TAG ?= ref-$(shell git rev-parse --short HEAD)
-LDFLAGS=-ldflags "-X=main.Version=$(TRAVIS_TAG)"
+LDFLAGS=-ldflags "-X=main.version=$(TRAVIS_TAG)"
 SRC=$(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 default: test
@@ -15,7 +15,7 @@ run: test
 
 build: test
 	@echo "== Build =="
-	go build -o $(BINARY_NAME) -v
+	go build -o $(BINARY_NAME) -v $(LDFLAGS)
 
 test:
 	@echo "== Test =="
