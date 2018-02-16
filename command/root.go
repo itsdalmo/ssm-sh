@@ -3,11 +3,12 @@ package command
 var Command RootCommand
 
 type RootCommand struct {
-	Version func()       `short:"v" long:"version" description:"Print the version and exit."`
-	List    ListCommand  `command:"list" alias:"ls" description:"List managed instances."`
-	Shell   ShellCommand `command:"shell" alias:"sh" description:"Start an interactive shell."`
-	Run     RunCommand   `command:"run" description:"Run a command on the targeted instances."`
-	AwsOpts AwsOptions   `group:"AWS Options"`
+	Version       func()               `short:"v" long:"version" description:"Print the version and exit."`
+	List          ListCommand          `command:"list" alias:"ls" description:"List managed instances."`
+	Shell         ShellCommand         `command:"shell" alias:"sh" description:"Start an interactive shell."`
+	Run           RunCommand           `command:"run" description:"Run a command on the targeted instances."`
+	ListDocuments ListDocumentsCommand `command:"list-documents" alias:"ld" description:"List available documents in ssm."`
+	AwsOpts       AwsOptions           `group:"AWS Options"`
 }
 
 type AwsOptions struct {

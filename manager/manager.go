@@ -117,6 +117,34 @@ func (m *Manager) ListInstances(limit int64, tagFilters []*TagFilter) ([]*Instan
 	return out, nil
 }
 
+// ListDocuments fetches a list of documents managed by SSM. Paginates until all responses have been collected.
+func (m *Manager) ListDocuments(limit int64, documentFilters []*ssm.DocumentFilter) ([]*Document, error) {
+	var out []*Document
+
+	input := &ssm.ListDocumentsInput{
+		MaxResults:         &limit,
+		DocumentFilterList: documentFilters,
+	}
+
+	for {
+		response, err := m.ssmClient.ListDocuments(input)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to list document")
+		}
+
+		// NOTE: ec2Info will be a shorter list when filtering is applied.
+		for k := range response.DocumentIdentifiers {
+			out = append(out, NewDocument(response.DocumentIdentifiers[k]))
+		}
+		if response.NextToken == nil {
+			break
+		}
+		input.NextToken = response.NextToken
+	}
+
+	return out, nil
+}
+
 // describeInstances retrieves additional information about SSM managed instances from EC2.
 func (m *Manager) describeInstances(instances []*ssm.InstanceInformation, tagFilters []*TagFilter) (map[string]*ssm.InstanceInformation, map[string]*ec2.Instance, error) {
 	var ids []*string
