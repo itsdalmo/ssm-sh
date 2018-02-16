@@ -6,7 +6,11 @@ import (
 	"os"
 )
 
+// Version is set on build by the Git release tag.
+var version string
+
 func main() {
+	command.CommandVersion = version
 	_, err := flags.Parse(&command.Command)
 	if err != nil {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
