@@ -7,7 +7,7 @@ import (
 )
 
 // Version is set on build by the Git release tag.
-var version string
+var version = "unknown"
 
 func main() {
 	command.CommandVersion = version

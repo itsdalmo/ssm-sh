@@ -5,8 +5,8 @@ import (
 	"os"
 )
 
-// CommandVersion (overridden in main.go)
-var CommandVersion = "unknown"
+// CommandVersion (set from main.go)
+var CommandVersion string
 
 func init() {
 	Command.Version = func() {
