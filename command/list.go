@@ -2,11 +2,12 @@ package command
 
 import (
 	"encoding/json"
-	"github.com/itsdalmo/ssm-sh/manager"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/itsdalmo/ssm-sh/manager"
+	"github.com/pkg/errors"
 )
 
 type ListCommand struct {
@@ -20,7 +21,7 @@ func (command *ListCommand) Execute([]string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create new session")
 	}
-	m := manager.NewManager(sess, Command.AwsOpts.Region)
+	m := manager.NewManager(sess, Command.AwsOpts.Region, manager.Opts{})
 
 	var filters []*manager.TagFilter
 	for _, tag := range command.Tags {

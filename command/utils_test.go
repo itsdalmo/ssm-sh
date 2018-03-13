@@ -3,12 +3,13 @@ package command_test
 import (
 	"bytes"
 	"errors"
-	"github.com/itsdalmo/ssm-sh/command"
-	"github.com/itsdalmo/ssm-sh/manager"
-	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/itsdalmo/ssm-sh/command"
+	"github.com/itsdalmo/ssm-sh/manager"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPrintInstances(t *testing.T) {
@@ -62,6 +63,13 @@ func TestPrintCommandOutput(t *testing.T) {
 			Error:      nil,
 		},
 		{
+			InstanceID: "i-00000000000000001",
+			Status:     "Success",
+			Output:     "Extended standard output",
+			OutputUrl:  "https://s3-ap-northeast-1.amazonaws.com/mybucket/foobar/c0896747-af2b-4359-bc34-0f951ce02007/i-00000000000000001/awsrunShellScript/0.awsrunShellScript/stdout",
+			Error:      nil,
+		},
+		{
 			InstanceID: "i-00000000000000002",
 			Status:     "Failed",
 			Output:     "Standard error",
@@ -79,6 +87,10 @@ func TestPrintCommandOutput(t *testing.T) {
 		expected := strings.TrimSpace(`
 i-00000000000000001 - Success:
 Standard output
+
+i-00000000000000001 - Success:
+Extended standard output
+(Output URL: https://s3-ap-northeast-1.amazonaws.com/mybucket/foobar/c0896747-af2b-4359-bc34-0f951ce02007/i-00000000000000001/awsrunShellScript/0.awsrunShellScript/stdout)
 
 i-00000000000000002 - Failed:
 Standard error
