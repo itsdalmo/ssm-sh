@@ -137,11 +137,10 @@ func PrintInstances(wrt io.Writer, instances []*manager.Instance) error {
 	}
 	err := w.Flush()
 	return err
-
 }
 
-// PrintDocument writes the output from ListDocuments.
-func PrintDocuments(wrt io.Writer, documents []*manager.Document) error {
+// PrintDocuments writes the output from ListDocuments.
+func PrintDocuments(wrt io.Writer, documents []*manager.DocumentIdentifier) error {
 	w := tabwriter.NewWriter(wrt, 0, 8, 1, ' ', 0)
 	header := []string{
 		"Name",
@@ -164,6 +163,24 @@ func PrintDocuments(wrt io.Writer, documents []*manager.Document) error {
 	err := w.Flush()
 	return err
 
+}
+
+// PrintDocumentDescription writes the output from DescribeDocument.
+func PrintDocumentDescription(wrt io.Writer, document *manager.DocumentDescription) error {
+	fmt.Fprintf(wrt, "Name: %s\n", document.Name)
+	fmt.Fprintf(wrt, "Description: %s\n", document.Description)
+	fmt.Fprintf(wrt, "Owner: %s\n", document.Owner)
+	fmt.Fprintf(wrt, "Document Version: %s\n", document.DocumentVersion)
+	fmt.Fprintf(wrt, "Document Format: %s\n", document.DocumentFormat)
+	fmt.Fprintf(wrt, "Document Type: %s\n", document.DocumentType)
+	fmt.Fprintf(wrt, "Schema Version: %s\n", document.SchemaVersion)
+	fmt.Fprintf(wrt, "Target Type: %s\n", document.TargetType)
+
+	// TODO: Should be converted to tabwriter, to make it more readable
+	fmt.Fprintf(wrt, "\nParameters:\n\n")
+	fmt.Fprintf(wrt, "%s\n", document.ParametersString())
+
+	return nil
 }
 
 // WriteInstances writes the output of ListInstances to a file as JSON.

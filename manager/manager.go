@@ -118,8 +118,8 @@ func (m *Manager) ListInstances(limit int64, tagFilters []*TagFilter) ([]*Instan
 }
 
 // ListDocuments fetches a list of documents managed by SSM. Paginates until all responses have been collected.
-func (m *Manager) ListDocuments(limit int64, documentFilters []*ssm.DocumentFilter) ([]*Document, error) {
-	var out []*Document
+func (m *Manager) ListDocuments(limit int64, documentFilters []*ssm.DocumentFilter) ([]*DocumentIdentifier, error) {
+	var out []*DocumentIdentifier
 
 	input := &ssm.ListDocumentsInput{
 		MaxResults:         &limit,
@@ -134,7 +134,7 @@ func (m *Manager) ListDocuments(limit int64, documentFilters []*ssm.DocumentFilt
 
 		// NOTE: ec2Info will be a shorter list when filtering is applied.
 		for k := range response.DocumentIdentifiers {
-			out = append(out, NewDocument(response.DocumentIdentifiers[k]))
+			out = append(out, NewDocumentIdentifier(response.DocumentIdentifiers[k]))
 		}
 		if response.NextToken == nil {
 			break
@@ -143,6 +143,23 @@ func (m *Manager) ListDocuments(limit int64, documentFilters []*ssm.DocumentFilt
 	}
 
 	return out, nil
+}
+
+// DescribeDocument lists information for a specific document managed by SSM.
+func (m *Manager) DescribeDocument(name string) (*DocumentDescription, error) {
+
+	input := &ssm.DescribeDocumentInput{
+		Name: aws.String(name),
+	}
+
+	response, err := m.ssmClient.DescribeDocument(input)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to describe document")
+	}
+
+	document := NewDocumentDescription(response.Document)
+
+	return document, nil
 }
 
 // describeInstances retrieves additional information about SSM managed instances from EC2.
@@ -213,14 +230,24 @@ func (m *Manager) RunCommand(instanceIds []string, command string) (string, erro
 	return aws.StringValue(res.Command.CommandId), nil
 }
 
-// RunCommand on the given instance ids.
-func (m *Manager) RunDocument(instanceIds []string, name string) (string, error) {
+// RunDocument on the given instance ids.
+func (m *Manager) RunDocument(instanceIds []string, name string, parameters []string) (string, error) {
+
+	var params map[string][]*string
+
+	if len(parameters) > 0 {
+		params = make(map[string][]*string)
+		for _, parameter := range parameters {
+			split := strings.Split(parameter, "=")
+			params[split[0]] = aws.StringSlice([]string{split[1]})
+		}
+	}
+
 	input := &ssm.SendCommandInput{
 		InstanceIds:  aws.StringSlice(instanceIds),
 		DocumentName: aws.String(name),
 		Comment:      aws.String("Document triggered through ssm-sh."),
-		// TODO: Add Parameters support
-		//Parameters:   map[string][]*string{"commands": {aws.String(command)}},
+		Parameters:   params,
 	}
 
 	res, err := m.ssmClient.SendCommand(input)

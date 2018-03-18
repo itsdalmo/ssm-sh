@@ -10,8 +10,9 @@ import (
 )
 
 type RunDocumentCommand struct {
-	Name       string `short:"n" long:"name" description:"Name of document in ssm."`
-	Timeout    int    `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
+	Name       string   `short:"n" long:"name" description:"Name of document in ssm."`
+	Timeout    int      `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
+	Parameters []string `short:"p" long:"parameter" description:"Zero or more parameters for the document (name=value)"`
 	TargetOpts TargetOptions
 }
 
@@ -33,7 +34,7 @@ func (command *RunDocumentCommand) Execute(args []string) error {
 	fmt.Printf("Use ctrl-c to abort the command early.\n\n")
 
 	// Start the command
-	commandID, err := m.RunDocument(targets, command.Name)
+	commandID, err := m.RunDocument(targets, command.Name, command.Parameters)
 	if err != nil {
 		return errors.Wrap(err, "failed to run command")
 	}
