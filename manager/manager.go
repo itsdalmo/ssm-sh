@@ -213,6 +213,24 @@ func (m *Manager) RunCommand(instanceIds []string, command string) (string, erro
 	return aws.StringValue(res.Command.CommandId), nil
 }
 
+// RunCommand on the given instance ids.
+func (m *Manager) RunDocument(instanceIds []string, name string) (string, error) {
+	input := &ssm.SendCommandInput{
+		InstanceIds:  aws.StringSlice(instanceIds),
+		DocumentName: aws.String(name),
+		Comment:      aws.String("Document triggered through ssm-sh."),
+		// TODO: Add Parameters support
+		//Parameters:   map[string][]*string{"commands": {aws.String(command)}},
+	}
+
+	res, err := m.ssmClient.SendCommand(input)
+	if err != nil {
+		return "", err
+	}
+
+	return aws.StringValue(res.Command.CommandId), nil
+}
+
 // AbortCommand command on the given instance ids.
 func (m *Manager) AbortCommand(instanceIds []string, commandID string) error {
 	_, err := m.ssmClient.CancelCommand(&ssm.CancelCommandInput{
