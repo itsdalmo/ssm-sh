@@ -40,7 +40,7 @@ build-docker:
 	@echo "== Docker build =="
 	docker build -t $(DOCKER_REPO):latest .
 
-build-release:
+build-release: test
 	@echo "== Release build =="
 	CGO_ENABLED=0 GOOS=$(TARGET) GOARCH=$(ARCH) go build $(LDFLAGS) -o $(BINARY_NAME)-$(TARGET)-$(ARCH)$(EXT) -v
 

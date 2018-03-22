@@ -108,7 +108,7 @@ func TestList(t *testing.T) {
 		actual, err := m.ListInstances(50, nil)
 		assert.Nil(t, err)
 		assert.NotNil(t, actual)
-		assert.Equal(t, expected, actual)
+		assert.ElementsMatch(t, expected, actual)
 	})
 
 	t.Run("Limit number of instances works", func(t *testing.T) {
@@ -116,7 +116,7 @@ func TestList(t *testing.T) {
 		actual, err := m.ListInstances(1, nil)
 		assert.Nil(t, err)
 		assert.NotNil(t, actual)
-		assert.Equal(t, expected, actual)
+		assert.ElementsMatch(t, expected, actual)
 	})
 
 	t.Run("Pagination works", func(t *testing.T) {
@@ -129,7 +129,7 @@ func TestList(t *testing.T) {
 		actual, err := m.ListInstances(50, nil)
 		assert.Nil(t, err)
 		assert.NotNil(t, actual)
-		assert.Equal(t, expected, actual)
+		assert.ElementsMatch(t, expected, actual)
 	})
 
 	t.Run("TagFilter works", func(t *testing.T) {
@@ -144,7 +144,7 @@ func TestList(t *testing.T) {
 		})
 		assert.Nil(t, err)
 		assert.NotNil(t, actual)
-		assert.Equal(t, expected, actual)
+		assert.ElementsMatch(t, expected, actual)
 	})
 
 	t.Run("Errors are propagated", func(t *testing.T) {
