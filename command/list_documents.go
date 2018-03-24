@@ -31,12 +31,12 @@ func (command *ListDocumentsCommand) Execute([]string) error {
 		})
 	}
 
-	doucments, err := m.ListDocuments(command.Limit, filters)
+	documents, err := m.ListDocuments(command.Limit, filters)
 	if err != nil {
 		return errors.Wrap(err, "failed to list documents")
 	}
 
-	if err := PrintDocuments(os.Stdout, doucments); err != nil {
+	if err := PrintDocuments(os.Stdout, documents); err != nil {
 		return errors.Wrap(err, "failed to print documents")
 	}
 

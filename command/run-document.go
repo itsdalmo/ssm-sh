@@ -17,13 +17,13 @@ type RunDocumentCommand struct {
 }
 
 func (command *RunDocumentCommand) Execute(args []string) error {
+	if command.Name == "" {
+		return errors.New("No document name set to trigger")
+	}
+
 	sess, err := newSession()
 	if err != nil {
 		return errors.Wrap(err, "failed to create new aws session")
-	}
-
-	if command.Name == "" {
-		return errors.New("No document name set to trigger")
 	}
 
 	m := manager.NewManager(sess, Command.AwsOpts.Region)

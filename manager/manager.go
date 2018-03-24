@@ -132,9 +132,8 @@ func (m *Manager) ListDocuments(limit int64, documentFilters []*ssm.DocumentFilt
 			return nil, errors.Wrap(err, "failed to list document")
 		}
 
-		// NOTE: ec2Info will be a shorter list when filtering is applied.
-		for k := range response.DocumentIdentifiers {
-			out = append(out, NewDocumentIdentifier(response.DocumentIdentifiers[k]))
+		for _, document := range response.DocumentIdentifiers {
+			out = append(out, NewDocumentIdentifier(document))
 		}
 		if response.NextToken == nil {
 			break

@@ -7,17 +7,17 @@ import (
 )
 
 type DescribeDocumentCommand struct {
-	Name       string   `short:"n" long:"name" description:"Name of document in ssm."`
+	Name string `short:"n" long:"name" description:"Name of document in ssm."`
 }
 
 func (command *DescribeDocumentCommand) Execute(args []string) error {
+	if command.Name == "" {
+		return errors.New("No document name set")
+	}
+
 	sess, err := newSession()
 	if err != nil {
 		return errors.Wrap(err, "failed to create new aws session")
-	}
-
-	if command.Name == "" {
-		return errors.New("No document name set")
 	}
 
 	m := manager.NewManager(sess, Command.AwsOpts.Region)

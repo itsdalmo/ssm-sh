@@ -35,7 +35,7 @@ type DocumentDescription struct {
 	Parameters      []*ssm.DocumentParameter
 }
 
-// ParametersString returns all field values for paramters, should be converted to a tabwriter
+// ParametersString returns all field values for parameters, should be converted to a tabwriter
 func (d *DocumentDescription) ParametersString() string {
 
 	var newLine = "\n"
