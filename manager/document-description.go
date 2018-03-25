@@ -1,7 +1,6 @@
 package manager
 
 import (
-	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"strings"
@@ -9,6 +8,17 @@ import (
 
 // NewDocumentDescription creates a new Document from ssm.DocumentIdentifier.
 func NewDocumentDescription(ssmDocument *ssm.DocumentDescription) *DocumentDescription {
+	var parameters []*DocumentParameter
+
+	for _, parameter := range ssmDocument.Parameters {
+		parameters = append(parameters, &DocumentParameter{
+			aws.StringValue(parameter.Name),
+			aws.StringValue(parameter.Description),
+			aws.StringValue(parameter.DefaultValue),
+			aws.StringValue(parameter.Type),
+		})
+	}
+
 	return &DocumentDescription{
 		Name:            aws.StringValue(ssmDocument.Name),
 		Description:     aws.StringValue(ssmDocument.Description),
@@ -18,7 +28,7 @@ func NewDocumentDescription(ssmDocument *ssm.DocumentDescription) *DocumentDescr
 		DocumentType:    aws.StringValue(ssmDocument.DocumentType),
 		SchemaVersion:   aws.StringValue(ssmDocument.SchemaVersion),
 		TargetType:      aws.StringValue(ssmDocument.TargetType),
-		Parameters:      ssmDocument.Parameters,
+		Parameters:      parameters,
 	}
 }
 
@@ -32,7 +42,14 @@ type DocumentDescription struct {
 	DocumentType    string `json:"documentType"`
 	SchemaVersion   string `json:"schemaVersion"`
 	TargetType      string `json:"targetType"`
-	Parameters      []*ssm.DocumentParameter
+	Parameters      []*DocumentParameter
+}
+
+type DocumentParameter struct {
+	Name         string
+	Description  string
+	DefaultValue string
+	Type         string
 }
 
 // ParametersTabString returns all parameter values separated by "\t|\t" for
@@ -47,10 +64,10 @@ func (d *DocumentDescription) ParametersTabString() string {
 
 	for _, parameter := range d.Parameters {
 		line = []string{
-			fmt.Sprintf(aws.StringValue(parameter.Name)),
-			fmt.Sprintf(aws.StringValue(parameter.Type)),
-			fmt.Sprintf(aws.StringValue(parameter.DefaultValue)),
-			fmt.Sprintf(aws.StringValue(parameter.Description)),
+			parameter.Name,
+			parameter.Type,
+			parameter.DefaultValue,
+			parameter.Description,
 		}
 		fields = append(fields, strings.Join(line, tab+del+tab))
 	}
@@ -64,14 +81,14 @@ func (d *DocumentDescription) TabString() string {
 	var tab = "\t"
 
 	fields := []string{
-		fmt.Sprintf(d.Name),
-		fmt.Sprintf(d.Description),
-		fmt.Sprintf(d.Owner),
-		fmt.Sprintf(d.DocumentVersion),
-		fmt.Sprintf(d.DocumentFormat),
-		fmt.Sprintf(d.DocumentType),
-		fmt.Sprintf(d.SchemaVersion),
-		fmt.Sprintf(d.TargetType),
+		d.Name,
+		d.Description,
+		d.Owner,
+		d.DocumentVersion,
+		d.DocumentFormat,
+		d.DocumentType,
+		d.SchemaVersion,
+		d.TargetType,
 	}
 	return strings.Join(fields, tab+del+tab)
 }
