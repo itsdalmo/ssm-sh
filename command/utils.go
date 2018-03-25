@@ -186,23 +186,25 @@ func PrintDocumentDescription(wrt io.Writer, document *manager.DocumentDescripti
 	if _, err := fmt.Fprintln(w, document.TabString()); err != nil {
 		return err
 	}
-	if err := w.Flush(); err != nil {
-		return err
-	}
 
-	fmt.Fprintf(wrt, "\nParameters:\n")
+	if len(document.Parameters) > 0 {
+		if err := w.Flush(); err != nil {
+			return err
+		}
 
-	parameterHeader := []string{
-		"Name",
-		"Type",
-		"DefaultValue",
-		"Description",
-	}
-	if _, err := fmt.Fprintln(w, strings.Join(parameterHeader, "\t|\t")); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(w, document.ParametersTabString()); err != nil {
-		return err
+		fmt.Fprintf(wrt, "\nParameters:\n")
+		parameterHeader := []string{
+			"Name",
+			"Type",
+			"DefaultValue",
+			"Description",
+		}
+		if _, err := fmt.Fprintln(w, strings.Join(parameterHeader, "\t|\t")); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintln(w, document.ParametersTabString()); err != nil {
+			return err
+		}
 	}
 
 	err := w.Flush()
