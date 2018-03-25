@@ -45,6 +45,7 @@ type DocumentDescription struct {
 	Parameters      []*DocumentParameter
 }
 
+// DocumentParameter describes relevant information about a SSM Document Parameter
 type DocumentParameter struct {
 	Name         string
 	Description  string
