@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// ListDocumentsCommand contains all arguments for list-documents command
 type ListDocumentsCommand struct {
 	Filters []*documentFilter `short:"f" long:"filter" description:"Filter the produced list by property (Name, Owner, DocumentType, PlatformTypes)"`
 	Limit   int64             `short:"l" long:"limit" description:"Limit the number of instances printed" default:"50"`
@@ -16,6 +17,7 @@ type ListDocumentsCommand struct {
 
 type documentFilter ssm.DocumentFilter
 
+// Execute list-documents command
 func (command *ListDocumentsCommand) Execute([]string) error {
 	sess, err := newSession()
 	if err != nil {

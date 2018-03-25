@@ -9,13 +9,15 @@ import (
 	"time"
 )
 
+// RunDocumentCommand contains all arguments for run-document command
 type RunDocumentCommand struct {
 	Name       string            `short:"n" long:"name" description:"Name of document in ssm."`
 	Timeout    int               `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
-	Parameters map[string]string `short:"p" long:"parameter" description:"Zero or more parameters for the document (name=value)"`
+	Parameters map[string]string `short:"p" long:"parameter" description:"Zero or more parameters for the document (name:value)"`
 	TargetOpts TargetOptions
 }
 
+// Execute run-document command
 func (command *RunDocumentCommand) Execute(args []string) error {
 	if command.Name == "" {
 		return errors.New("No document name set to trigger")

@@ -6,10 +6,12 @@ import (
 	"os"
 )
 
+// DescribeDocumentCommand contains all arguments for describe-document command
 type DescribeDocumentCommand struct {
 	Name string `short:"n" long:"name" description:"Name of document in ssm."`
 }
 
+// Execute describe-documents command
 func (command *DescribeDocumentCommand) Execute(args []string) error {
 	if command.Name == "" {
 		return errors.New("No document name set")
