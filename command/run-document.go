@@ -10,9 +10,9 @@ import (
 )
 
 type RunDocumentCommand struct {
-	Name       string   `short:"n" long:"name" description:"Name of document in ssm."`
-	Timeout    int      `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
-	Parameters []string `short:"p" long:"parameter" description:"Zero or more parameters for the document (name=value)"`
+	Name       string            `short:"n" long:"name" description:"Name of document in ssm."`
+	Timeout    int               `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
+	Parameters map[string]string `short:"p" long:"parameter" description:"Zero or more parameters for the document (name=value)"`
 	TargetOpts TargetOptions
 }
 

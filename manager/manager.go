@@ -230,15 +230,14 @@ func (m *Manager) RunCommand(instanceIds []string, command string) (string, erro
 }
 
 // RunDocument on the given instance ids.
-func (m *Manager) RunDocument(instanceIds []string, name string, parameters []string) (string, error) {
+func (m *Manager) RunDocument(instanceIds []string, name string, parameters map[string]string) (string, error) {
 
 	var params map[string][]*string
 
 	if len(parameters) > 0 {
 		params = make(map[string][]*string)
-		for _, parameter := range parameters {
-			split := strings.Split(parameter, "=")
-			params[split[0]] = aws.StringSlice([]string{split[1]})
+		for k, v := range parameters {
+			params[k] = aws.StringSlice([]string{v})
 		}
 	}
 
