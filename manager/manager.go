@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -13,9 +19,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/pkg/errors"
-	"io"
-	"sync"
-	"time"
 )
 
 // TagFilter represents a key=value pair for AWS EC2 tags.
@@ -37,26 +40,40 @@ type CommandOutput struct {
 	InstanceID string
 	Status     string
 	Output     string
+	OutputUrl  string
 	Error      error
 }
 
 // Manager handles the clients interfacing with AWS.
 type Manager struct {
-	ssmClient ssmiface.SSMAPI
-	s3Client  s3iface.S3API
-	ec2Client ec2iface.EC2API
-	region    string
+	ssmClient    ssmiface.SSMAPI
+	s3Client     s3iface.S3API
+	ec2Client    ec2iface.EC2API
+	extendOutput bool
+	region       string
+	s3Bucket     string
+	s3KeyPrefix  string
+}
+
+type Opts struct {
+	ExtendOutput bool
+	S3Bucket     string
+	S3KeyPrefix  string
 }
 
 // NewManager creates a new Manager from an AWS session and region.
-func NewManager(sess *session.Session, region string) *Manager {
-	config := &aws.Config{Region: aws.String(region)}
-	return &Manager{
-		ssmClient: ssm.New(sess, config),
-		s3Client:  s3.New(sess, config),
-		ec2Client: ec2.New(sess, config),
+func NewManager(sess *session.Session, region string, opts Opts) *Manager {
+	awsCfg := &aws.Config{Region: aws.String(region)}
+	m := &Manager{
+		ssmClient: ssm.New(sess, awsCfg),
+		s3Client:  s3.New(sess, awsCfg),
+		ec2Client: ec2.New(sess, awsCfg),
 		region:    region,
 	}
+	m.extendOutput = opts.ExtendOutput
+	m.s3Bucket = opts.S3Bucket
+	m.s3KeyPrefix = opts.S3KeyPrefix
+	return m
 }
 
 // NewTestManager creates a new manager for testing purposes.
@@ -154,7 +171,12 @@ func (m *Manager) RunCommand(instanceIds []string, command string) (string, erro
 		Comment:      aws.String("Interactive command."),
 		Parameters:   map[string][]*string{"commands": {aws.String(command)}},
 	}
-
+	if m.s3Bucket != "" {
+		input.OutputS3BucketName = aws.String(m.s3Bucket)
+	}
+	if m.s3KeyPrefix != "" {
+		input.OutputS3KeyPrefix = aws.String(m.s3KeyPrefix)
+	}
 	res, err := m.ssmClient.SendCommand(input)
 	if err != nil {
 		return "", err
@@ -206,7 +228,7 @@ func (m *Manager) pollInstanceOutput(ctx context.Context, instanceID string, com
 				CommandId:  aws.String(commandID),
 				InstanceId: aws.String(instanceID),
 			})
-			if out, ok := newCommandOutput(result, err); ok {
+			if out, ok := m.newCommandOutput(result, err); ok {
 				c <- out
 				return
 			}
@@ -214,7 +236,7 @@ func (m *Manager) pollInstanceOutput(ctx context.Context, instanceID string, com
 	}
 }
 
-func newCommandOutput(result *ssm.GetCommandInvocationOutput, err error) (*CommandOutput, bool) {
+func (m *Manager) newCommandOutput(result *ssm.GetCommandInvocationOutput, err error) (*CommandOutput, bool) {
 	out := &CommandOutput{
 		InstanceID: aws.StringValue(result.InstanceId),
 		Status:     aws.StringValue(result.StatusDetails),
@@ -234,9 +256,17 @@ func newCommandOutput(result *ssm.GetCommandInvocationOutput, err error) (*Comma
 		return out, true
 	case "Success":
 		out.Output = aws.StringValue(result.StandardOutputContent)
+		out.OutputUrl = aws.StringValue(result.StandardOutputUrl)
+		if m.extendOutput {
+			return m.extendTruncatedOutput(*out), true
+		}
 		return out, true
 	case "Failed":
 		out.Output = aws.StringValue(result.StandardErrorContent)
+		out.OutputUrl = aws.StringValue(result.StandardErrorUrl)
+		if m.extendOutput {
+			return m.extendTruncatedOutput(*out), true
+		}
 		return out, true
 	default:
 		out.Error = fmt.Errorf("Unrecoverable status: %s", out.Status)
@@ -244,7 +274,35 @@ func newCommandOutput(result *ssm.GetCommandInvocationOutput, err error) (*Comma
 	}
 }
 
-func (m *Manager) readS3Output(bucket, key string) (string, error) {
+func (m *Manager) extendTruncatedOutput(out CommandOutput) *CommandOutput {
+	const truncationMarker = "--output truncated--"
+	if strings.Contains(out.Output, truncationMarker) {
+		s3out, err := m.readOutput(out.OutputUrl)
+		if err != nil {
+			out.Error = errors.Wrap(err, "failed to fetch extended output")
+		}
+		out.Output = s3out
+		return &out
+	}
+	return &out
+}
+
+func (m *Manager) readOutput(url string) (string, error) {
+	regex := regexp.MustCompile(`://s3[\-a-z0-9]*\.amazonaws.com/([^/]+)/(.+)|://([^.]+)\.s3\.amazonaws\.com/(.+)`)
+	matches := regex.FindStringSubmatch(url)
+	if len(matches) == 0 {
+		return "", errors.Errorf("failed due to unexpected s3 url pattern: %s", url)
+	}
+	bucket := matches[1]
+	key := matches[2]
+	out, err := m.readS3Object(bucket, key)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to fetch s3 object: %s", url)
+	}
+	return out, nil
+}
+
+func (m *Manager) readS3Object(bucket, key string) (string, error) {
 	output, err := m.s3Client.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),

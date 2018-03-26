@@ -1,9 +1,10 @@
 package main
 
 import (
+	"os"
+
 	"github.com/itsdalmo/ssm-sh/command"
 	"github.com/jessevdk/go-flags"
-	"os"
 )
 
 // Version is set on build by the Git release tag.

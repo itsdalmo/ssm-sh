@@ -3,15 +3,17 @@ package command
 import (
 	"context"
 	"fmt"
-	"github.com/chzyer/readline"
-	"github.com/itsdalmo/ssm-sh/manager"
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/chzyer/readline"
+	"github.com/itsdalmo/ssm-sh/manager"
+	"github.com/pkg/errors"
 )
 
 type ShellCommand struct {
+	SSMOpts    SSMOptions `group:"SSM options"`
 	TargetOpts TargetOptions
 }
 
@@ -21,7 +23,11 @@ func (command *ShellCommand) Execute([]string) error {
 		return errors.Wrap(err, "failed to create new aws session")
 	}
 
-	m := manager.NewManager(sess, Command.AwsOpts.Region)
+	opts, err := command.SSMOpts.Parse()
+	if err != nil {
+		return err
+	}
+	m := manager.NewManager(sess, Command.AwsOpts.Region, *opts)
 	targets, err := setTargets(command.TargetOpts)
 	if err != nil {
 		return errors.Wrap(err, "failed to set targets")

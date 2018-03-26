@@ -3,15 +3,17 @@ package command
 import (
 	"context"
 	"fmt"
-	"github.com/itsdalmo/ssm-sh/manager"
-	"github.com/pkg/errors"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/itsdalmo/ssm-sh/manager"
+	"github.com/pkg/errors"
 )
 
 type RunCommand struct {
-	Timeout    int `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
+	Timeout    int        `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
+	SSMOpts    SSMOptions `group:"SSM options"`
 	TargetOpts TargetOptions
 }
 
@@ -21,7 +23,11 @@ func (command *RunCommand) Execute(args []string) error {
 		return errors.Wrap(err, "failed to create new aws session")
 	}
 
-	m := manager.NewManager(sess, Command.AwsOpts.Region)
+	opts, err := command.SSMOpts.Parse()
+	if err != nil {
+		return err
+	}
+	m := manager.NewManager(sess, Command.AwsOpts.Region, *opts)
 	targets, err := setTargets(command.TargetOpts)
 	if err != nil {
 		return errors.Wrap(err, "failed to set targets")
