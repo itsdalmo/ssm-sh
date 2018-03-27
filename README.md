@@ -81,9 +81,14 @@ $ ssm-sh run --help
 
 ...
 [run command options]
-      -i, --timeout=     Seconds to wait for command result before timing out. (default: 30)
-      -t, --target=      One or more instance ids to target
-          --target-file= Path to a JSON file containing a list of targets.
+      -i, --timeout=       Seconds to wait for command result before timing out. (default: 30)
+      -t, --target=        One or more instance ids to target
+          --target-file=   Path to a JSON file containing a list of targets.
+
+    SSM options:
+      -x, --extend-output  Extend truncated command outputs by fetching S3 objects containing full ones
+      -b, --s3-bucket=     S3 bucket in which S3 objects containing full command outputs are stored. Required when --extend-output is provided.
+      -k, --s3-key-prefix= Key prefix of S3 objects containing full command outputs.
 ```
 
 ## Example
