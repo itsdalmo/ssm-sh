@@ -77,6 +77,31 @@ var (
 		},
 	}
 
+	ssmDocumentDescription = &ssm.DocumentDescription{
+		Name:            aws.String("AWS-RunShellScript"),
+		Description:     aws.String("Run a shell script or specify the commands to run."),
+		Owner:           aws.String("Amazon"),
+		DocumentVersion: aws.String("1"),
+		DocumentFormat:  aws.String("JSON"),
+		DocumentType:    aws.String("Command"),
+		SchemaVersion:   aws.String("1.2"),
+		TargetType:      aws.String("Linux"),
+		Parameters: []*ssm.DocumentParameter{
+			{
+				Name:         aws.String("commands"),
+				Description:  aws.String("Specify a shell script or a command to run"),
+				DefaultValue: aws.String(""),
+				Type:         aws.String("StringList"),
+			},
+			{
+				Name:         aws.String("executionTimeout"),
+				Description:  aws.String("The time in seconds for a command to complete"),
+				DefaultValue: aws.String("3600"),
+				Type:         aws.String("String"),
+			},
+		},
+	}
+
 	outputInstances = []*manager.Instance{
 		{
 			InstanceID:       "i-00000000000000001",
@@ -120,6 +145,31 @@ var (
 			DocumentType:    "Command",
 			SchemaVersion:   "1.0",
 			TargetType:      "Windows",
+		},
+	}
+
+	outputDocumentDescription = &manager.DocumentDescription{
+		Name:            "AWS-RunShellScript",
+		Description:     "Run a shell script or specify the commands to run.",
+		Owner:           "Amazon",
+		DocumentVersion: "1",
+		DocumentFormat:  "JSON",
+		DocumentType:    "Command",
+		SchemaVersion:   "1.2",
+		TargetType:      "Linux",
+		Parameters: []*manager.DocumentParameter{
+			{
+				Name:         "commands",
+				Description:  "Specify a shell script or a command to run",
+				DefaultValue: "",
+				Type:         "StringList",
+			},
+			{
+				Name:         "executionTimeout",
+				Description:  "The time in seconds for a command to complete",
+				DefaultValue: "3600",
+				Type:         "String",
+			},
 		},
 	}
 )
@@ -267,6 +317,36 @@ func TestListDocumentsCommand(t *testing.T) {
 		actual, err := m.ListDocuments(50, nil)
 		assert.NotNil(t, err)
 		assert.EqualError(t, err, "failed to list document: expected")
+		assert.Nil(t, actual)
+	})
+}
+
+func TestDescribeDocumentsCommand(t *testing.T) {
+	ssmMock := &manager.MockSSM{
+		Error:         false,
+		NextToken:     "",
+		CommandStatus: "Success",
+		CommandHistory: map[string]*struct {
+			Command *ssm.Command
+			Status  string
+		}{},
+		DocumentDescription: ssmDocumentDescription,
+	}
+
+	m := manager.NewTestManager(ssmMock, nil, nil)
+
+	t.Run("Describe documents works", func(t *testing.T) {
+		expected := outputDocumentDescription
+		actual, err := m.DescribeDocument("AWS-RunShellScript")
+		assert.Nil(t, err)
+		assert.NotNil(t, actual)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("Incorrect name failes", func(t *testing.T) {
+		actual, err := m.DescribeDocument("Does-not-exist")
+		assert.NotNil(t, err)
+		assert.EqualError(t, err, "failed to describe document: expected")
 		assert.Nil(t, actual)
 	})
 }

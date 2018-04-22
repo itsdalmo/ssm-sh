@@ -95,11 +95,12 @@ func (mock *MockEC2) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.
 
 type MockSSM struct {
 	ssmiface.SSMAPI
-	Instances      []*ssm.InstanceInformation
-	Documents      []*ssm.DocumentIdentifier
-	NextToken      string
-	CommandStatus  string
-	CommandHistory map[string]*struct {
+	Instances           []*ssm.InstanceInformation
+	Documents           []*ssm.DocumentIdentifier
+	DocumentDescription *ssm.DocumentDescription
+	NextToken           string
+	CommandStatus       string
+	CommandHistory      map[string]*struct {
 		Command *ssm.Command
 		Status  string
 	}
@@ -193,6 +194,20 @@ func (mock *MockSSM) ListDocuments(input *ssm.ListDocumentsInput) (*ssm.ListDocu
 	return &ssm.ListDocumentsOutput{
 		DocumentIdentifiers: output,
 		NextToken:           nil,
+	}, nil
+}
+
+func (mock *MockSSM) DescribeDocument(input *ssm.DescribeDocumentInput) (*ssm.DescribeDocumentOutput, error) {
+	if mock.Error {
+		return nil, errors.New("expected")
+	}
+
+	if aws.StringValue(input.Name) != aws.StringValue(mock.DocumentDescription.Name) {
+		return nil, errors.New("expected")
+	}
+
+	return &ssm.DescribeDocumentOutput{
+		Document: mock.DocumentDescription,
 	}, nil
 }
 
