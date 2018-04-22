@@ -23,7 +23,7 @@ func (command *ListDocumentsCommand) Execute([]string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create new session")
 	}
-	m := manager.NewManager(sess, Command.AwsOpts.Region)
+	m := manager.NewManager(sess, Command.AwsOpts.Region, manager.Opts{})
 
 	var filters []*ssm.DocumentFilter
 	for _, filter := range command.Filters {

@@ -22,7 +22,7 @@ func (command *DescribeDocumentCommand) Execute(args []string) error {
 		return errors.Wrap(err, "failed to create new aws session")
 	}
 
-	m := manager.NewManager(sess, Command.AwsOpts.Region)
+	m := manager.NewManager(sess, Command.AwsOpts.Region, manager.Opts{})
 
 	document, err := m.DescribeDocument(command.Name)
 	if err != nil {

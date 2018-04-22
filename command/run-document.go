@@ -28,7 +28,7 @@ func (command *RunDocumentCommand) Execute(args []string) error {
 		return errors.Wrap(err, "failed to create new aws session")
 	}
 
-	m := manager.NewManager(sess, Command.AwsOpts.Region)
+	m := manager.NewManager(sess, Command.AwsOpts.Region, manager.Opts{})
 	targets, err := setTargets(command.TargetOpts)
 	if err != nil {
 		return errors.Wrap(err, "failed to set targets")
