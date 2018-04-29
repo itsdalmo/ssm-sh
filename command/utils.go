@@ -137,7 +137,78 @@ func PrintInstances(wrt io.Writer, instances []*manager.Instance) error {
 	}
 	err := w.Flush()
 	return err
+}
 
+// PrintDocuments writes the output from ListDocuments.
+func PrintDocuments(wrt io.Writer, documents []*manager.DocumentIdentifier) error {
+	w := tabwriter.NewWriter(wrt, 0, 8, 1, ' ', 0)
+	header := []string{
+		"Name",
+		"Owner",
+		"Document Version",
+		"Document Format",
+		"Document Type",
+		"Schema Version",
+		"Target Type",
+	}
+
+	if _, err := fmt.Fprintln(w, strings.Join(header, "\t|\t")); err != nil {
+		return err
+	}
+	for _, document := range documents {
+		if _, err := fmt.Fprintln(w, document.TabString()); err != nil {
+			return err
+		}
+	}
+	err := w.Flush()
+	return err
+
+}
+
+// PrintDocumentDescription writes the output from DescribeDocument.
+func PrintDocumentDescription(wrt io.Writer, document *manager.DocumentDescription) error {
+	w := tabwriter.NewWriter(wrt, 0, 8, 1, ' ', 0)
+
+	header := []string{
+		"Name",
+		"Description",
+		"Owner",
+		"Document Version",
+		"Document Format",
+		"Document Type",
+		"Schema Version",
+		"Target Type",
+	}
+
+	if _, err := fmt.Fprintln(w, strings.Join(header, "\t|\t")); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(w, document.TabString()); err != nil {
+		return err
+	}
+
+	if len(document.Parameters) > 0 {
+		if err := w.Flush(); err != nil {
+			return err
+		}
+
+		fmt.Fprintf(wrt, "\nParameters:\n")
+		parameterHeader := []string{
+			"Name",
+			"Type",
+			"DefaultValue",
+			"Description",
+		}
+		if _, err := fmt.Fprintln(w, strings.Join(parameterHeader, "\t|\t")); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintln(w, document.ParametersTabString()); err != nil {
+			return err
+		}
+	}
+
+	err := w.Flush()
+	return err
 }
 
 // WriteInstances writes the output of ListInstances to a file as JSON.

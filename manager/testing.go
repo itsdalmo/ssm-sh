@@ -95,10 +95,12 @@ func (mock *MockEC2) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.
 
 type MockSSM struct {
 	ssmiface.SSMAPI
-	Instances      []*ssm.InstanceInformation
-	NextToken      string
-	CommandStatus  string
-	CommandHistory map[string]*struct {
+	Instances           []*ssm.InstanceInformation
+	Documents           []*ssm.DocumentIdentifier
+	DocumentDescription *ssm.DocumentDescription
+	NextToken           string
+	CommandStatus       string
+	CommandHistory      map[string]*struct {
 		Command *ssm.Command
 		Status  string
 	}
@@ -139,6 +141,73 @@ func (mock *MockSSM) DescribeInstanceInformation(input *ssm.DescribeInstanceInfo
 	return &ssm.DescribeInstanceInformationOutput{
 		InstanceInformationList: output,
 		NextToken:               nil,
+	}, nil
+}
+
+func (mock *MockSSM) ListDocuments(input *ssm.ListDocumentsInput) (*ssm.ListDocumentsOutput, error) {
+	if mock.Error {
+		return nil, errors.New("expected")
+	}
+
+	var output []*ssm.DocumentIdentifier
+
+	// filter output based on DocumentFilterList
+	// only "Owner" is supported for testing
+	if len(input.DocumentFilterList) > 0 {
+		for _, filter := range input.DocumentFilterList {
+			if aws.StringValue(filter.Key) == "Owner" {
+				for _, document := range mock.Documents {
+					if aws.StringValue(document.Owner) == aws.StringValue(filter.Value) {
+						output = append(output, document)
+					}
+				}
+			}
+		}
+	} else {
+		output = mock.Documents
+	}
+
+	if input.MaxResults != nil {
+		if i := int(*input.MaxResults); i < len(mock.Documents) {
+			output = mock.Documents[:i]
+		}
+	}
+
+	if mock.NextToken != "" {
+		switch {
+		case input.NextToken == nil:
+			// Give an empty list on first response
+			return &ssm.ListDocumentsOutput{
+				DocumentIdentifiers: []*ssm.DocumentIdentifier{},
+				NextToken:           aws.String(mock.NextToken),
+			}, nil
+		case *input.NextToken == mock.NextToken:
+			return &ssm.ListDocumentsOutput{
+				DocumentIdentifiers: output,
+				NextToken:           nil,
+			}, nil
+		default:
+			return nil, errors.New("Wrong token")
+		}
+
+	}
+	return &ssm.ListDocumentsOutput{
+		DocumentIdentifiers: output,
+		NextToken:           nil,
+	}, nil
+}
+
+func (mock *MockSSM) DescribeDocument(input *ssm.DescribeDocumentInput) (*ssm.DescribeDocumentOutput, error) {
+	if mock.Error {
+		return nil, errors.New("expected")
+	}
+
+	if aws.StringValue(input.Name) != aws.StringValue(mock.DocumentDescription.Name) {
+		return nil, errors.New("expected")
+	}
+
+	return &ssm.DescribeDocumentOutput{
+		Document: mock.DocumentDescription,
 	}, nil
 }
 

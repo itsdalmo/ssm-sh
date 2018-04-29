@@ -56,6 +56,52 @@ var (
 		},
 	}
 
+	ssmDocumentIdentifiers = []*ssm.DocumentIdentifier{
+		{
+			Name:            aws.String("AWS-RunShellScript"),
+			Owner:           aws.String("Amazon"),
+			DocumentVersion: aws.String("1"),
+			DocumentFormat:  aws.String("JSON"),
+			DocumentType:    aws.String("Command"),
+			SchemaVersion:   aws.String("1.2"),
+			TargetType:      aws.String("Linux"),
+		},
+		{
+			Name:            aws.String("Custom"),
+			Owner:           aws.String("test-user"),
+			DocumentVersion: aws.String("2"),
+			DocumentFormat:  aws.String("YAML"),
+			DocumentType:    aws.String("Command"),
+			SchemaVersion:   aws.String("1.0"),
+			TargetType:      aws.String("Windows"),
+		},
+	}
+
+	ssmDocumentDescription = &ssm.DocumentDescription{
+		Name:            aws.String("AWS-RunShellScript"),
+		Description:     aws.String("Run a shell script or specify the commands to run."),
+		Owner:           aws.String("Amazon"),
+		DocumentVersion: aws.String("1"),
+		DocumentFormat:  aws.String("JSON"),
+		DocumentType:    aws.String("Command"),
+		SchemaVersion:   aws.String("1.2"),
+		TargetType:      aws.String("Linux"),
+		Parameters: []*ssm.DocumentParameter{
+			{
+				Name:         aws.String("commands"),
+				Description:  aws.String("Specify a shell script or a command to run"),
+				DefaultValue: aws.String(""),
+				Type:         aws.String("StringList"),
+			},
+			{
+				Name:         aws.String("executionTimeout"),
+				Description:  aws.String("The time in seconds for a command to complete"),
+				DefaultValue: aws.String("3600"),
+				Type:         aws.String("String"),
+			},
+		},
+	}
+
 	outputInstances = []*manager.Instance{
 		{
 			InstanceID:       "i-00000000000000001",
@@ -78,6 +124,52 @@ var (
 			IPAddress:        "10.0.0.100",
 			PingStatus:       "Online",
 			LastPingDateTime: time.Date(2018, time.January, 30, 13, 32, 0, 0, time.UTC),
+		},
+	}
+
+	outputDocumentIdentifiers = []*manager.DocumentIdentifier{
+		{
+			Name:            "AWS-RunShellScript",
+			Owner:           "Amazon",
+			DocumentVersion: "1",
+			DocumentFormat:  "JSON",
+			DocumentType:    "Command",
+			SchemaVersion:   "1.2",
+			TargetType:      "Linux",
+		},
+		{
+			Name:            "Custom",
+			Owner:           "test-user",
+			DocumentVersion: "2",
+			DocumentFormat:  "YAML",
+			DocumentType:    "Command",
+			SchemaVersion:   "1.0",
+			TargetType:      "Windows",
+		},
+	}
+
+	outputDocumentDescription = &manager.DocumentDescription{
+		Name:            "AWS-RunShellScript",
+		Description:     "Run a shell script or specify the commands to run.",
+		Owner:           "Amazon",
+		DocumentVersion: "1",
+		DocumentFormat:  "JSON",
+		DocumentType:    "Command",
+		SchemaVersion:   "1.2",
+		TargetType:      "Linux",
+		Parameters: []*manager.DocumentParameter{
+			{
+				Name:         "commands",
+				Description:  "Specify a shell script or a command to run",
+				DefaultValue: "",
+				Type:         "StringList",
+			},
+			{
+				Name:         "executionTimeout",
+				Description:  "The time in seconds for a command to complete",
+				DefaultValue: "3600",
+				Type:         "String",
+			},
 		},
 	}
 )
@@ -160,6 +252,109 @@ func TestList(t *testing.T) {
 	})
 }
 
+func TestListDocumentsCommand(t *testing.T) {
+	ssmMock := &manager.MockSSM{
+		Error:         false,
+		NextToken:     "",
+		CommandStatus: "Success",
+		CommandHistory: map[string]*struct {
+			Command *ssm.Command
+			Status  string
+		}{},
+		Documents: ssmDocumentIdentifiers,
+	}
+
+	m := manager.NewTestManager(ssmMock, nil, nil)
+
+	t.Run("List documents works", func(t *testing.T) {
+		expected := outputDocumentIdentifiers
+		actual, err := m.ListDocuments(50, nil)
+		assert.Nil(t, err)
+		assert.NotNil(t, actual)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("Limit number of documents works", func(t *testing.T) {
+		expected := outputDocumentIdentifiers[:1]
+		actual, err := m.ListDocuments(1, nil)
+		assert.Nil(t, err)
+		assert.NotNil(t, actual)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("Pagination works", func(t *testing.T) {
+		ssmMock.NextToken = "next"
+		defer func() {
+			ssmMock.NextToken = ""
+		}()
+
+		expected := outputDocumentIdentifiers
+		actual, err := m.ListDocuments(50, nil)
+		assert.Nil(t, err)
+		assert.NotNil(t, actual)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("Filter works", func(t *testing.T) {
+		expected := outputDocumentIdentifiers[:1]
+		actual, err := m.ListDocuments(50, []*ssm.DocumentFilter{
+			{
+				Key:   aws.String("Owner"),
+				Value: aws.String("Amazon"),
+			},
+		})
+		assert.Nil(t, err)
+		assert.NotNil(t, actual)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("Errors are propagated", func(t *testing.T) {
+		ssmMock.Error = true
+		defer func() {
+			ssmMock.Error = false
+		}()
+
+		actual, err := m.ListDocuments(50, nil)
+		assert.NotNil(t, err)
+		assert.EqualError(t, err, "failed to list document: expected")
+		assert.Nil(t, actual)
+	})
+}
+
+func TestDescribeDocumentsCommand(t *testing.T) {
+	ssmMock := &manager.MockSSM{
+		Error:         false,
+		NextToken:     "",
+		CommandStatus: "Success",
+		CommandHistory: map[string]*struct {
+			Command *ssm.Command
+			Status  string
+		}{},
+		DocumentDescription: ssmDocumentDescription,
+	}
+
+	m := manager.NewTestManager(ssmMock, nil, nil)
+
+	t.Run("Describe documents works", func(t *testing.T) {
+		expected := outputDocumentDescription
+		actual, err := m.DescribeDocument("AWS-RunShellScript")
+		assert.Nil(t, err)
+		assert.NotNil(t, actual)
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("Incorrect name failes", func(t *testing.T) {
+		actual, err := m.DescribeDocument("Does-not-exist")
+		assert.NotNil(t, err)
+		assert.EqualError(t, err, "failed to describe document: expected")
+		assert.Nil(t, actual)
+	})
+}
+
+/*
+func TestDescribeDocumentCommand(t *testing.T) {
+}*/
+
 func TestRunCommand(t *testing.T) {
 	ssmMock := &manager.MockSSM{
 		Error:         false,
@@ -206,6 +401,10 @@ func TestRunCommand(t *testing.T) {
 		assert.Equal(t, "", actual)
 	})
 }
+
+/*
+func TestRunDocumentCommand(t *testing.T) {
+}*/
 
 func TestAbortCommand(t *testing.T) {
 	ssmMock := &manager.MockSSM{
