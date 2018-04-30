@@ -11,13 +11,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type RunCommand struct {
+type RunCmdCommand struct {
 	Timeout    int        `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
 	SSMOpts    SSMOptions `group:"SSM options"`
 	TargetOpts TargetOptions
 }
 
-func (command *RunCommand) Execute(args []string) error {
+func (command *RunCmdCommand) Execute(args []string) error {
 	sess, err := newSession()
 	if err != nil {
 		return errors.Wrap(err, "failed to create new aws session")

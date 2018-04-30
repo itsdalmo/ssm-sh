@@ -10,13 +10,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ListCommand struct {
+type ListInstancesCommand struct {
 	Tags   []*tag `short:"f" long:"filter" description:"Filter the produced list by tag (key=value,..)"`
 	Limit  int64  `short:"l" long:"limit" description:"Limit the number of instances printed" default:"50"`
 	Output string `short:"o" long:"output" description:"Path to a file where the list of instances will be written as JSON."`
 }
 
-func (command *ListCommand) Execute([]string) error {
+func (command *ListInstancesCommand) Execute([]string) error {
 	sess, err := newSession()
 	if err != nil {
 		return errors.Wrap(err, "failed to create new session")
