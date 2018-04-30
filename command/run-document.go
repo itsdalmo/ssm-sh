@@ -14,6 +14,7 @@ type RunDocumentCommand struct {
 	Name       string            `short:"n" long:"name" description:"Name of document in ssm."`
 	Timeout    int               `short:"i" long:"timeout" description:"Seconds to wait for command result before timing out." default:"30"`
 	Parameters map[string]string `short:"p" long:"parameter" description:"Zero or more parameters for the document (name:value)"`
+	SSMOpts    SSMOptions        `group:"SSM options"`
 	TargetOpts TargetOptions
 }
 
@@ -28,7 +29,11 @@ func (command *RunDocumentCommand) Execute(args []string) error {
 		return errors.Wrap(err, "failed to create new aws session")
 	}
 
-	m := manager.NewManager(sess, Command.AwsOpts.Region, manager.Opts{})
+	opts, err := command.SSMOpts.Parse()
+	if err != nil {
+		return err
+	}
+	m := manager.NewManager(sess, Command.AwsOpts.Region, *opts)
 	targets, err := setTargets(command.TargetOpts)
 	if err != nil {
 		return errors.Wrap(err, "failed to set targets")
