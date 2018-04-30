@@ -383,7 +383,7 @@ func TestRunCommand(t *testing.T) {
 
 	t.Run("Run works", func(t *testing.T) {
 		expected := "command-1"
-		actual, err := m.RunCommand(targets, "ls -la")
+		actual, err := m.RunCommand(targets, "AWS-RunShellScript", map[string]string{"commands": "ls -la"})
 		assert.Nil(t, err)
 		assert.NotNil(t, actual)
 		assert.Equal(t, expected, actual)
@@ -395,16 +395,12 @@ func TestRunCommand(t *testing.T) {
 			ssmMock.Error = false
 		}()
 
-		actual, err := m.RunCommand(targets, "ls -la")
+		actual, err := m.RunCommand(targets, "AWS-RunShellScript", map[string]string{"commands": "ls -la"})
 		assert.NotNil(t, err)
 		assert.EqualError(t, err, "expected")
 		assert.Equal(t, "", actual)
 	})
 }
-
-/*
-func TestRunDocumentCommand(t *testing.T) {
-}*/
 
 func TestAbortCommand(t *testing.T) {
 	ssmMock := &manager.MockSSM{
@@ -433,14 +429,14 @@ func TestAbortCommand(t *testing.T) {
 	}
 
 	t.Run("Abort works", func(t *testing.T) {
-		id, err := m.RunCommand(targets, "ls -la")
+		id, err := m.RunCommand(targets, "AWS-RunShellScript", map[string]string{"commands": "ls -la"})
 		assert.Nil(t, err)
 		err = m.AbortCommand(targets, id)
 		assert.Nil(t, err)
 	})
 
 	t.Run("Invalid command id errors are propagated", func(t *testing.T) {
-		_, err := m.RunCommand(targets, "ls -la")
+		_, err := m.RunCommand(targets, "AWS-RunShellScript", map[string]string{"commands": "ls -la"})
 		assert.Nil(t, err)
 		err = m.AbortCommand(targets, "invalid")
 		assert.NotNil(t, err)
@@ -486,7 +482,7 @@ func TestOutput(t *testing.T) {
 	}
 
 	t.Run("Get output works with standard out", func(t *testing.T) {
-		id, err := m.RunCommand(targets, "ls -la")
+		id, err := m.RunCommand(targets, "AWS-RunShellScript", map[string]string{"commands": "ls -la"})
 		assert.Nil(t, err)
 
 		ctx := context.Background()
@@ -510,7 +506,7 @@ func TestOutput(t *testing.T) {
 			ssmMock.CommandStatus = "Success"
 		}()
 
-		id, err := m.RunCommand(targets, "ls -la")
+		id, err := m.RunCommand(targets, "AWS-RunShellScript", map[string]string{"commands": "ls -la"})
 		assert.Nil(t, err)
 
 		ctx := context.Background()
@@ -525,7 +521,7 @@ func TestOutput(t *testing.T) {
 	})
 
 	t.Run("Get output is aborted if the context is done", func(t *testing.T) {
-		id, err := m.RunCommand(targets, "ls -la")
+		id, err := m.RunCommand(targets, "AWS-RunShellScript", map[string]string{"commands": "ls -la"})
 		assert.Nil(t, err)
 
 		ctx, cancel := context.WithCancel(context.Background())

@@ -35,7 +35,8 @@ func (command *RunCmdCommand) Execute(args []string) error {
 	fmt.Printf("Use ctrl-c to abort the command early.\n\n")
 
 	// Start the command
-	commandID, err := m.RunCommand(targets, strings.Join(args, " "))
+	cmd := strings.Join(args, " ")
+	commandID, err := m.RunCommand(targets, "AWS-RunShellScript", map[string]string{"commands": cmd})
 	if err != nil {
 		return errors.Wrap(err, "failed to run command")
 	}

@@ -36,7 +36,7 @@ func (command *RunDocumentCommand) Execute(args []string) error {
 	fmt.Printf("Use ctrl-c to abort the command early.\n\n")
 
 	// Start the command
-	commandID, err := m.RunDocument(targets, command.Name, command.Parameters)
+	commandID, err := m.RunCommand(targets, command.Name, command.Parameters)
 	if err != nil {
 		return errors.Wrap(err, "failed to run command")
 	}
