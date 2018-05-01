@@ -12,17 +12,17 @@ type RootCommand struct {
 }
 
 type ListCommand struct {
-	Instances ListInstancesCommand `command:"instances" alias:"i" description:"List managed instances."`
-	Documents ListDocumentsCommand `command:"documents" alias:"d" description:"List managed documents."`
+	Instances ListInstancesCommand `command:"instances" alias:"ins" description:"List managed instances."`
+	Documents ListDocumentsCommand `command:"documents" alias:"doc" description:"List managed documents."`
 }
 
 type RunCommand struct {
-	RunCmd      RunCmdCommand      `command:"cmd" alias:"c" description:"Run a command on the targeted instances."`
-	RunDocument RunDocumentCommand `command:"document" alias:"d" description:"Runs a document from ssm."`
+	RunCmd      RunCmdCommand      `command:"command" alias:"cmd" description:"Run a command on the targeted instances."`
+	RunDocument RunDocumentCommand `command:"document" alias:"doc" description:"Runs a document from ssm."`
 }
 
 type DescribeCommand struct {
-	Describe DescribeDocumentCommand `command:"document" alias:"d" description:"Description a document from ssm."`
+	Describe DescribeDocumentCommand `command:"document" alias:"doc" description:"Description a document from ssm."`
 }
 
 type AwsOptions struct {
