@@ -47,7 +47,7 @@ which ssm-sh
 $ ssm-sh --help
 
 Usage:
-  main [OPTIONS] <command>
+  ssm-sh [OPTIONS] <command>
 
 Application Options:
   -v, --version  Print the version and exit.
