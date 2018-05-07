@@ -47,7 +47,10 @@ which ssm-sh
 $ ssm-sh --help
 
 Usage:
-  ssm-sh [OPTIONS] <list | run | shell>
+  ssm-sh [OPTIONS] <command>
+
+Application Options:
+  -v, --version  Print the version and exit.
 
 AWS Options:
   -p, --profile= AWS Profile to use. (If you are not using Vaulted).
@@ -57,31 +60,61 @@ Help Options:
   -h, --help     Show this help message
 
 Available commands:
-  list   List managed instances. (aliases: ls)
-  run    Run a command on the targeted instances.
-  shell  Start an interactive shell. (aliases: sh)
+  describe  Description a document from ssm.
+  list      List managed instances or documents. (aliases: ls)
+  run       Run a command or document on the targeted instances.
+  shell     Start an interactive shell. (aliases: sh)
 ```
 
-#### List usage
+#### List instances usage
 
 ```bash
-$ ssm-sh list --help
+$ ssm-sh list instances --help
 
 ...
-[list command options]
+[instances command options]
       -f, --filter= Filter the produced list by tag (key=value,..)
       -l, --limit=  Limit the number of instances printed (default: 50)
       -o, --output= Path to a file where the list of instances will be written as JSON.
 ```
 
-#### Run/shell usage
-
+#### List documents usage
 ```bash
-$ ssm-sh run --help
+$ ssm-sh list documents --help
 
 ...
-[run command options]
+[documents command options]
+      -f, --filter= Filter the produced list by property (Name, Owner, DocumentType, PlatformTypes)
+      -l, --limit=  Limit the number of instances printed (default: 50)
+```
+
+#### Run cmd/shell usage
+
+```bash
+$ ssm-sh run cmd --help
+
+...
+[cmd command options]
       -i, --timeout=       Seconds to wait for command result before timing out. (default: 30)
+      -t, --target=        One or more instance ids to target
+          --target-file=   Path to a JSON file containing a list of targets.
+
+    SSM options:
+      -x, --extend-output  Extend truncated command outputs by fetching S3 objects containing full ones
+      -b, --s3-bucket=     S3 bucket in which S3 objects containing full command outputs are stored. Required when --extend-output is provided.
+      -k, --s3-key-prefix= Key prefix of S3 objects containing full command outputs.
+```
+
+#### Run document usage
+
+```bash
+$ ssm-sh run document --help
+
+...
+[document command options]
+      -n, --name=          Name of document in ssm.
+      -i, --timeout=       Seconds to wait for command result before timing out. (default: 30)
+      -p, --parameter=     Zero or more parameters for the document (name:value)
       -t, --target=        One or more instance ids to target
           --target-file=   Path to a JSON file containing a list of targets.
 
@@ -94,7 +127,7 @@ $ ssm-sh run --help
 ## Example
 
 ```bash
-$ vaulted -n lab-admin -- ssm-sh list --filter Name="*itsdalmo" -o example.json
+$ vaulted -n lab-admin -- ssm-sh list instances --filter Name="*itsdalmo" -o example.json
 
 Instance ID         | Name                             | State   | Image ID     | Platform     | Version | IP            | Status | Last pinged
 i-03762678c45546813 | ssm-manager-manual-test-itsdalmo | running | ami-db1688a2 | Amazon Linux | 2.0     | 172.53.17.163 | Online | 2018-02-09 12:37

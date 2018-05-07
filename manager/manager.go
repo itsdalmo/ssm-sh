@@ -208,29 +208,7 @@ func (m *Manager) describeInstances(instances []*ssm.InstanceInformation, tagFil
 }
 
 // RunCommand on the given instance ids.
-func (m *Manager) RunCommand(instanceIds []string, command string) (string, error) {
-	input := &ssm.SendCommandInput{
-		InstanceIds:  aws.StringSlice(instanceIds),
-		DocumentName: aws.String("AWS-RunShellScript"),
-		Comment:      aws.String("Interactive command."),
-		Parameters:   map[string][]*string{"commands": {aws.String(command)}},
-	}
-	if m.s3Bucket != "" {
-		input.OutputS3BucketName = aws.String(m.s3Bucket)
-	}
-	if m.s3KeyPrefix != "" {
-		input.OutputS3KeyPrefix = aws.String(m.s3KeyPrefix)
-	}
-	res, err := m.ssmClient.SendCommand(input)
-	if err != nil {
-		return "", err
-	}
-
-	return aws.StringValue(res.Command.CommandId), nil
-}
-
-// RunDocument on the given instance ids.
-func (m *Manager) RunDocument(instanceIds []string, name string, parameters map[string]string) (string, error) {
+func (m *Manager) RunCommand(instanceIds []string, name string, parameters map[string]string) (string, error) {
 
 	var params map[string][]*string
 
@@ -247,7 +225,12 @@ func (m *Manager) RunDocument(instanceIds []string, name string, parameters map[
 		Comment:      aws.String("Document triggered through ssm-sh."),
 		Parameters:   params,
 	}
-
+	if m.s3Bucket != "" {
+		input.OutputS3BucketName = aws.String(m.s3Bucket)
+	}
+	if m.s3KeyPrefix != "" {
+		input.OutputS3KeyPrefix = aws.String(m.s3KeyPrefix)
+	}
 	res, err := m.ssmClient.SendCommand(input)
 	if err != nil {
 		return "", err

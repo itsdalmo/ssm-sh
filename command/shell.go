@@ -71,7 +71,7 @@ func (command *ShellCommand) Execute([]string) error {
 		}
 
 		// Start command
-		commandID, err := m.RunCommand(targets, cmd)
+		commandID, err := m.RunCommand(targets, "AWS-RunShellScript", map[string]string{"commands": cmd})
 		if err != nil {
 			return errors.Wrap(err, "failed to Run command")
 		}
