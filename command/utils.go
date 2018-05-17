@@ -104,6 +104,9 @@ func PrintCommandOutput(wrt io.Writer, output *manager.CommandOutput) error {
 	if _, err := fmt.Fprintf(wrt, "%s\n", output.Output); err != nil {
 		return err
 	}
+	if _, err := fmt.Fprintf(wrt, "%s\n", output.StdErr); err != nil {
+		return err
+	}
 	if output.OutputUrl != "" {
 		if _, err := fmt.Fprintf(wrt, "(Output URL: %s)\n", output.OutputUrl); err != nil {
 			return err

@@ -41,6 +41,8 @@ type CommandOutput struct {
 	Status     string
 	Output     string
 	OutputUrl  string
+	StdErr     string
+	StdErrUrl  string
 	Error      error
 }
 
@@ -295,6 +297,7 @@ func (m *Manager) newCommandOutput(result *ssm.GetCommandInvocationOutput, err e
 		InstanceID: aws.StringValue(result.InstanceId),
 		Status:     aws.StringValue(result.StatusDetails),
 		Output:     "",
+		StdErr:     "",
 		Error:      err,
 	}
 
@@ -311,6 +314,8 @@ func (m *Manager) newCommandOutput(result *ssm.GetCommandInvocationOutput, err e
 	case "Success":
 		out.Output = aws.StringValue(result.StandardOutputContent)
 		out.OutputUrl = aws.StringValue(result.StandardOutputUrl)
+		out.StdErr = aws.StringValue(result.StandardErrorContent)
+		out.StdErrUrl = aws.StringValue(result.StandardErrorUrl)
 		if m.extendOutput {
 			return m.extendTruncatedOutput(*out), true
 		}
