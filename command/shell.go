@@ -18,7 +18,10 @@ type ShellCommand struct {
 }
 
 func (command *ShellCommand) Execute([]string) error {
+	var shellDocument = "AWS-RunShellScript"
+
 	sess, err := newSession()
+
 	if err != nil {
 		return errors.Wrap(err, "failed to create new aws session")
 	}
@@ -33,6 +36,21 @@ func (command *ShellCommand) Execute([]string) error {
 		return errors.Wrap(err, "failed to set targets")
 	}
 	fmt.Printf("Type 'exit' to exit. Use ctrl-c to abort running commands.\n\n")
+
+	var filters []*manager.TagFilter
+	filters = append(filters, &manager.TagFilter{
+		Key:    "platform",
+		Values: []string{"windows"},
+	})
+
+	windowsTargets, err := m.FilterInstances(targets, filters)
+	if ( len(targets) != len(windowsTargets) ) {
+		errors.New("Targets: Cannot mix WIndows and Linux targets")
+	}
+	if (len(windowsTargets) > 0){
+		fmt.Printf("Windows Targets: %d \n\n", len(windowsTargets) )
+		shellDocument = "AWS-RunPowerShellScript"
+	}
 
 	// (Parent) Context for the main thread and output channel
 	ctx, cancel := context.WithCancel(context.Background())
@@ -71,7 +89,7 @@ func (command *ShellCommand) Execute([]string) error {
 		}
 
 		// Start command
-		commandID, err := m.RunCommand(targets, "AWS-RunPowerShellScript", map[string]string{"commands": cmd})
+		commandID, err := m.RunCommand(targets, shellDocument, map[string]string{"commands": cmd})
 		if err != nil {
 			return errors.Wrap(err, "failed to Run command")
 		}

@@ -21,6 +21,7 @@ func NewInstance(ssmInstance *ssm.InstanceInformation, ec2Instance *ec2.Instance
 		Name:             name,
 		State:            aws.StringValue(ec2Instance.State.Name),
 		ImageID:          aws.StringValue(ec2Instance.ImageId),
+		Platform:         aws.StringValue(ec2Instance.Platform),
 		PlatformName:     aws.StringValue(ssmInstance.PlatformName),
 		PlatformVersion:  aws.StringValue(ssmInstance.PlatformVersion),
 		IPAddress:        aws.StringValue(ssmInstance.IPAddress),
@@ -37,6 +38,7 @@ type Instance struct {
 	Name             string    `json:"name"`
 	State            string    `json:"state"`
 	ImageID          string    `json:"imageId"`
+	Platform         string    `json:"platform"`
 	PlatformName     string    `json:"platformName"`
 	PlatformVersion  string    `json:"platformVersion"`
 	IPAddress        string    `json:"ipAddress"`
@@ -60,6 +62,7 @@ func (i *Instance) TabString() string {
 		i.Name,
 		i.State,
 		i.ImageID,
+		i.Platform,
 		i.PlatformName,
 		i.PlatformVersion,
 		i.IPAddress,

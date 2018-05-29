@@ -124,6 +124,7 @@ func PrintInstances(wrt io.Writer, instances []*manager.Instance) error {
 		"State",
 		"Image ID",
 		"Platform",
+		"Platform Description",
 		"Version",
 		"IP",
 		"Status",

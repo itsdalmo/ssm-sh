@@ -30,7 +30,7 @@ type TagFilter struct {
 // Filter returns the ec2.Filter representation of the TagFilter.
 func (t *TagFilter) Filter() *ec2.Filter {
 	return &ec2.Filter{
-		Name:   aws.String(fmt.Sprintf("tag:%s", t.Key)),
+		Name:   aws.String(fmt.Sprintf("%s", t.Key)),
 		Values: aws.StringSlice(t.Values),
 	}
 }
@@ -119,6 +119,42 @@ func (m *Manager) ListInstances(limit int64, tagFilters []*TagFilter) ([]*Instan
 	return out, nil
 }
 
+// ListInstances fetches a list of instances managed by SSM. Paginates until all responses have been collected.
+func (m *Manager) FilterInstances(instanceIds []string, tagFilters []*TagFilter) ([]string, error) {
+	var in []*string
+	var out []string
+	var filters []*ec2.Filter
+
+	for _, f := range tagFilters {
+		filters = append(filters, f.Filter())
+	}
+	for _, i := range instanceIds {
+		in = append(in, &i)
+	}
+	input := &ec2.DescribeInstancesInput{
+		Filters: filters,
+		InstanceIds: in,
+	}
+
+	for {
+		response, err := m.ec2Client.DescribeInstances(input)
+		if err != nil {
+			return nil, err
+		}
+		for _, reservation := range response.Reservations {
+			for _, instance := range reservation.Instances {
+				out = append(out, *instance.InstanceId)
+			}
+		}
+		if response.NextToken == nil {
+			break
+		}
+		input.NextToken = response.NextToken
+	}
+
+	return out, nil
+}
+
 // ListDocuments fetches a list of documents managed by SSM. Paginates until all responses have been collected.
 func (m *Manager) ListDocuments(limit int64, documentFilters []*ssm.DocumentFilter) ([]*DocumentIdentifier, error) {
 	var out []*DocumentIdentifier
@@ -176,17 +212,13 @@ func (m *Manager) describeInstances(instances []*ssm.InstanceInformation, tagFil
 		ids = append(ids, instance.InstanceId)
 	}
 
-	filters = append(filters, &ec2.Filter{
-		Name:   aws.String("instance-id"),
-		Values: ids,
-	})
-
 	for _, f := range tagFilters {
 		filters = append(filters, f.Filter())
 	}
 
 	input := &ec2.DescribeInstancesInput{
 		Filters: filters,
+		InstanceIds: ids,
 	}
 
 	for {
