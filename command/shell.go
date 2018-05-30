@@ -44,11 +44,11 @@ func (command *ShellCommand) Execute([]string) error {
 	})
 
 	windowsTargets, err := m.FilterInstances(targets, filters)
-	if ( len(targets) != len(windowsTargets) ) {
+	if len(targets) != len(windowsTargets) {
 		errors.New("Targets: Cannot mix WIndows and Linux targets")
 	}
-	if (len(windowsTargets) > 0){
-		fmt.Printf("Windows Targets: %d \n\n", len(windowsTargets) )
+	if len(windowsTargets) > 0 {
+		fmt.Printf("Windows Targets: %d \n\n", len(windowsTargets))
 		shellDocument = "AWS-RunPowerShellScript"
 	}
 

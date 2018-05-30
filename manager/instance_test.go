@@ -21,8 +21,9 @@ func TestInstance(t *testing.T) {
 	}
 
 	ec2Input := &ec2.Instance{
-		ImageId: aws.String("ami-db000001"),
-		State:   &ec2.InstanceState{Name: aws.String("running")},
+		ImageId:  aws.String("ami-db000001"),
+		Platform: aws.String("Linux"),
+		State:    &ec2.InstanceState{Name: aws.String("running")},
 		Tags: []*ec2.Tag{
 			{
 				Key:   aws.String("Name"),
@@ -36,6 +37,7 @@ func TestInstance(t *testing.T) {
 		Name:             "instance 1",
 		State:            "running",
 		ImageID:          "ami-db000001",
+		Platform:         "Linux",
 		PlatformName:     "Amazon Linux",
 		PlatformVersion:  "1.0",
 		IPAddress:        "10.0.0.1",
@@ -56,7 +58,7 @@ func TestInstance(t *testing.T) {
 	})
 
 	t.Run("Instance TabString works", func(t *testing.T) {
-		expected := "i-00000000000000001\t|\tinstance 1\t|\trunning\t|\tami-db000001\t|\tAmazon Linux\t|\t1.0\t|\t10.0.0.1\t|\tOnline\t|\t2018-01-27 13:32"
+		expected := "i-00000000000000001\t|\tinstance 1\t|\trunning\t|\tami-db000001\t|\tLinux\t|\tAmazon Linux\t|\t1.0\t|\t10.0.0.1\t|\tOnline\t|\t2018-01-27 13:32"
 		actual := output.TabString()
 		assert.Equal(t, expected, actual)
 	})

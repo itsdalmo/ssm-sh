@@ -132,7 +132,7 @@ func (m *Manager) FilterInstances(instanceIds []string, tagFilters []*TagFilter)
 		in = append(in, &i)
 	}
 	input := &ec2.DescribeInstancesInput{
-		Filters: filters,
+		Filters:     filters,
 		InstanceIds: in,
 	}
 
@@ -217,7 +217,7 @@ func (m *Manager) describeInstances(instances []*ssm.InstanceInformation, tagFil
 	}
 
 	input := &ec2.DescribeInstancesInput{
-		Filters: filters,
+		Filters:     filters,
 		InstanceIds: ids,
 	}
 

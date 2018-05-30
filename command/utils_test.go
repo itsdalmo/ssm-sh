@@ -19,6 +19,7 @@ func TestPrintInstances(t *testing.T) {
 			Name:             "instance 1",
 			State:            "running",
 			ImageID:          "ami-db000001",
+			Platform:         "Linux",
 			PlatformName:     "Amazon Linux",
 			PlatformVersion:  "1.0",
 			IPAddress:        "10.0.0.1",
@@ -30,6 +31,7 @@ func TestPrintInstances(t *testing.T) {
 			Name:             "instance 2",
 			State:            "running",
 			ImageID:          "ami-db000002",
+			Platform:         "Linux",
 			PlatformName:     "Amazon Linux 2",
 			PlatformVersion:  "2.0",
 			IPAddress:        "10.0.0.100",
@@ -40,9 +42,9 @@ func TestPrintInstances(t *testing.T) {
 
 	t.Run("Print works", func(t *testing.T) {
 		expected := strings.TrimSpace(`
-Instance ID         | Name       | State   | Image ID     | Platform       | Version | IP         | Status | Last pinged
-i-00000000000000001 | instance 1 | running | ami-db000001 | Amazon Linux   | 1.0     | 10.0.0.1   | Online | 2018-01-27 13:32
-i-00000000000000002 | instance 2 | running | ami-db000002 | Amazon Linux 2 | 2.0     | 10.0.0.100 | Online | 2018-01-30 13:32
+Instance ID         | Name       | State   | Image ID     | Platform | Platform Description | Version | IP         | Status | Last pinged
+i-00000000000000001 | instance 1 | running | ami-db000001 | Linux    | Amazon Linux         | 1.0     | 10.0.0.1   | Online | 2018-01-27 13:32
+i-00000000000000002 | instance 2 | running | ami-db000002 | Linux    | Amazon Linux 2       | 2.0     | 10.0.0.100 | Online | 2018-01-30 13:32
 `)
 
 		b := new(bytes.Buffer)
@@ -88,12 +90,15 @@ func TestPrintCommandOutput(t *testing.T) {
 i-00000000000000001 - Success:
 Standard output
 
+
 i-00000000000000001 - Success:
 Extended standard output
+
 (Output URL: https://s3-ap-northeast-1.amazonaws.com/mybucket/foobar/c0896747-af2b-4359-bc34-0f951ce02007/i-00000000000000001/awsrunShellScript/0.awsrunShellScript/stdout)
 
 i-00000000000000002 - Failed:
 Standard error
+
 
 i-00000000000000003 - Error:
 error
