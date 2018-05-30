@@ -520,7 +520,7 @@ func TestOutput(t *testing.T) {
 		for o := range out {
 			assert.Nil(t, o.Error)
 			assert.Equal(t, "Failed", o.Status)
-			assert.Equal(t, "example standard error", o.Output)
+			assert.Equal(t, "example standard error", o.StdErr)
 		}
 	})
 
