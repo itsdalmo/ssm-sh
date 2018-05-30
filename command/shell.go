@@ -35,7 +35,6 @@ func (command *ShellCommand) Execute([]string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to set targets")
 	}
-	fmt.Printf("Type 'exit' to exit. Use ctrl-c to abort running commands.\n\n")
 
 	var filters []*manager.TagFilter
 	filters = append(filters, &manager.TagFilter{
@@ -45,10 +44,11 @@ func (command *ShellCommand) Execute([]string) error {
 
 	windowsTargets, err := m.FilterInstances(targets, filters)
 	if len(targets) != len(windowsTargets) {
-		errors.New("Targets: Cannot mix WIndows and Linux targets")
+		errors.New("cannot mix windows and linux targets")
 	}
+
 	if len(windowsTargets) > 0 {
-		fmt.Printf("Windows Targets: %d \n\n", len(windowsTargets))
+		fmt.Printf("Windows Targets\n\n")
 		shellDocument = "AWS-RunPowerShellScript"
 	}
 
@@ -71,6 +71,8 @@ func (command *ShellCommand) Execute([]string) error {
 		panic(err)
 	}
 	defer rl.Close()
+
+	fmt.Printf("Type 'exit' to exit. Use ctrl-c to abort running commands.\n\n")
 
 	for {
 		cmd, err := rl.Readline()
