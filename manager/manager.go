@@ -119,7 +119,7 @@ func (m *Manager) ListInstances(limit int64, tagFilters []*TagFilter) ([]*Instan
 	return out, nil
 }
 
-// ListInstances fetches a list of instances managed by SSM. Paginates until all responses have been collected.
+// FilterInstances filters a given list of instances.
 func (m *Manager) FilterInstances(instanceIds []string, tagFilters []*TagFilter) ([]string, error) {
 	var in []*string
 	var out []string
