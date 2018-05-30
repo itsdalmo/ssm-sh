@@ -343,18 +343,11 @@ func (m *Manager) newCommandOutput(result *ssm.GetCommandInvocationOutput, err e
 	case "Cancelled":
 		out.Output = "Command was cancelled"
 		return out, true
-	case "Success":
+	case "Success", "Failed":
 		out.Output = aws.StringValue(result.StandardOutputContent)
 		out.OutputUrl = aws.StringValue(result.StandardOutputUrl)
 		out.StdErr = aws.StringValue(result.StandardErrorContent)
 		out.StdErrUrl = aws.StringValue(result.StandardErrorUrl)
-		if m.extendOutput {
-			return m.extendTruncatedOutput(*out), true
-		}
-		return out, true
-	case "Failed":
-		out.Output = aws.StringValue(result.StandardErrorContent)
-		out.OutputUrl = aws.StringValue(result.StandardErrorUrl)
 		if m.extendOutput {
 			return m.extendTruncatedOutput(*out), true
 		}
