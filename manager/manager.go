@@ -30,7 +30,7 @@ type TagFilter struct {
 // Filter returns the ec2.Filter representation of the TagFilter.
 func (t *TagFilter) Filter() *ec2.Filter {
 	return &ec2.Filter{
-		Name:   aws.String(fmt.Sprintf("%s", t.Key)),
+		Name:   aws.String(t.Key),
 		Values: aws.StringSlice(t.Values),
 	}
 }
@@ -119,6 +119,7 @@ func (m *Manager) ListInstances(limit int64, tagFilters []*TagFilter) ([]*Instan
 	return out, nil
 }
 
+// TODO: rewrite describeInstances so that we could use it inside FilterInstances, and then in turn use FilterInstances inside ListInstances. Makes things a little more DRY
 // FilterInstances filters a given list of instances.
 func (m *Manager) FilterInstances(instanceIds []string, tagFilters []*TagFilter) ([]string, error) {
 	var in []*string
