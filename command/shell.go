@@ -5,11 +5,19 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"io/ioutil"
 	"strings"
+	"os/exec"
+	"encoding/base64"
+	"path/filepath"
+
+	// "os/signal"
+	// "sync"
 
 	"github.com/chzyer/readline"
 	"github.com/itsdalmo/ssm-sh/manager"
 	"github.com/pkg/errors"
+	// "github.com/fsnotify/fsnotify"
 )
 
 type ShellCommand struct {
@@ -74,24 +82,37 @@ func (command *ShellCommand) Execute([]string) error {
 
 	fmt.Printf("Type 'exit' to exit. Use ctrl-c to abort running commands.\n\n")
 
+	var nextCommand, cmd string
 	for {
-		cmd, err := rl.Readline()
+		if nextCommand == ""{
+			cmd, err = rl.Readline()
 
-		if err == readline.ErrInterrupt {
-			continue
-		} else if err == io.EOF {
-			return nil
+			if err == readline.ErrInterrupt {
+				continue
+			} else if err == io.EOF {
+				return nil
+			}
+		} else {
+			cmd = nextCommand
+			nextCommand = ""
 		}
 
+		var commandID, processFile string
+		process := "shell"
 		cmd = strings.TrimSpace(cmd)
 		if len(cmd) == 0 {
 			continue
 		} else if cmd == "exit" {
 			return nil
+		} else if strings.HasPrefix(cmd, "edit ") {
+			editCmd := "Get-Content " + cmd[5:]
+			processFile = cmd[5:]
+			commandID, err = m.RunCommand(targets, shellDocument, map[string]string{"commands": editCmd })
+			process = "edit"
+		} else{
+			commandID, err = m.RunCommand(targets, shellDocument, map[string]string{"commands": cmd})
 		}
 
-		// Start command
-		commandID, err := m.RunCommand(targets, shellDocument, map[string]string{"commands": cmd})
 		if err != nil {
 			return errors.Wrap(err, "failed to Run command")
 		}
@@ -111,11 +132,91 @@ func (command *ShellCommand) Execute([]string) error {
 				if output == nil && !open {
 					break Polling
 				}
-				err := PrintCommandOutput(os.Stdout, output)
+				nextCommand, err = processOutput(processFile, output, process)
 				if err != nil {
-					return errors.Wrap(err, "failed to print output")
+					return errors.Wrap(err, "failed to process output")
 				}
 			}
 		}
 	}
+}
+
+func processOutput(processFile string, output *manager.CommandOutput, process string) (string, error) {
+	switch process {
+		case "shell" : {
+			if err := PrintCommandOutput(os.Stdout, output); err != nil {
+				return "", errors.Wrap(err, "failed to print output")
+			}
+			return "", nil
+		}
+		case "edit": {
+			nextCommand, err := editCommand(processFile, output)
+			if err != nil {
+				return "", errors.Wrap(err, "failed to edit")
+			}
+			return nextCommand, nil
+		}
+	}
+	return "", nil
+}
+
+func editCommand(processFile string, output *manager.CommandOutput) (string, error) {
+	tempFile, err := createTempfile(processFile, []byte(output.Output))
+	if err != nil {
+		return "", errors.Wrap(err, "failed to run edit command")
+	}
+	if err := editFile(tempFile); err != nil {
+		return "", errors.Wrap(err, "failed to run edit command")
+	}
+	nextCommand, err := saveCommand(processFile, tempFile)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to run edit command")
+	}
+
+	return nextCommand, nil
+}
+
+func saveCommand(remoteFile string, localFile string) (string, error) {
+	body, err := ioutil.ReadFile(localFile)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to read edited file")
+	}
+	// TODO: size limits!
+	saveCmd := fmt.Sprintf("[System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String('%s')) | Out-File -Encoding ASCII '%s'", base64.StdEncoding.EncodeToString(body), remoteFile)
+	fmt.Println(saveCmd)
+	return saveCmd, nil
+}
+
+func createTempfile(fileName string, body []byte) (string, error) {
+	dir, err := ioutil.TempDir(os.TempDir(), "ssm-sh")
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create temp file")
+	}
+	// Sorry for windows
+	tempFileName := filepath.Join(dir, filepath.Base(strings.Replace(fileName, "\\", string(os.PathSeparator), -1)))
+	fmt.Println("temp file created : ", tempFileName)
+
+	err = ioutil.WriteFile(tempFileName, body, os.ModePerm)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create temp file")
+	}
+	return tempFileName, nil
+}
+
+func editFile(path string) error{
+	command := getDefaultEditor() + " " + path
+
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(err, "failed to edit")
+	}
+
+	return nil
+}
+
+func getDefaultEditor() string {
+	return os.Getenv("EDITOR")
 }

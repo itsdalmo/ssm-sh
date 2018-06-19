@@ -209,8 +209,13 @@ func (m *Manager) describeInstances(instances []*ssm.InstanceInformation, tagFil
 	out := make(map[string]*ec2.Instance)
 
 	for _, instance := range instances {
-		org[aws.StringValue(instance.InstanceId)] = instance
-		ids = append(ids, instance.InstanceId)
+		instanceId := aws.StringValue(instance.InstanceId)
+		org[instanceId] = instance
+		if (instanceId[0] == 'm'){
+			fmt.Printf("skip association: %s\n", instanceId)
+		} else {
+			ids = append(ids, instance.InstanceId)
+		}
 	}
 
 	for _, f := range tagFilters {
