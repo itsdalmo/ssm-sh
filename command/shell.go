@@ -134,7 +134,7 @@ func (command *ShellCommand) Execute([]string) error {
 				}
 				nextCommand, err = processOutput(processFile, output, process)
 				if err != nil {
-					return errors.Wrap(err, "failed to process output")
+					return errors.Wrap(err, "failed to process")
 				}
 			}
 		}
@@ -145,14 +145,14 @@ func processOutput(processFile string, output *manager.CommandOutput, process st
 	switch process {
 		case "shell" : {
 			if err := PrintCommandOutput(os.Stdout, output); err != nil {
-				return "", errors.Wrap(err, "failed to print output")
+				return "", errors.Wrap(err, "processOutput")
 			}
 			return "", nil
 		}
 		case "edit": {
 			nextCommand, err := editCommand(processFile, output)
 			if err != nil {
-				return "", errors.Wrap(err, "failed to edit")
+				return "", errors.Wrap(err, "processOutput")
 			}
 			return nextCommand, nil
 		}
@@ -161,16 +161,20 @@ func processOutput(processFile string, output *manager.CommandOutput, process st
 }
 
 func editCommand(processFile string, output *manager.CommandOutput) (string, error) {
-	tempFile, err := createTempfile(processFile, []byte(output.Output))
+	fileContent := output.Output
+	if strings.HasSuffix(fileContent, "--output truncated--") {
+		return "", errors.New("output truncated, file is too large to edit")
+	}
+	tempFile, err := createTempfile(processFile, []byte(fileContent))
 	if err != nil {
-		return "", errors.Wrap(err, "failed to run edit command")
+		return "", errors.Wrap(err, "editCommand")
 	}
 	if err := editFile(tempFile); err != nil {
-		return "", errors.Wrap(err, "failed to run edit command")
+		return "", errors.Wrap(err, "editCommand")
 	}
 	nextCommand, err := saveCommand(processFile, tempFile)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to run edit command")
+		return "", errors.Wrap(err, "editCommand")
 	}
 
 	return nextCommand, nil
@@ -179,11 +183,11 @@ func editCommand(processFile string, output *manager.CommandOutput) (string, err
 func saveCommand(remoteFile string, localFile string) (string, error) {
 	body, err := ioutil.ReadFile(localFile)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to read edited file")
+		return "", errors.Wrap(err, "saveCommand")
 	}
 	// TODO: size limits!
+	// TODO: make this determined by target type ie, unix : "/usr/bin/base64 -d %s > %s"
 	saveCmd := fmt.Sprintf("[System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String('%s')) | Out-File -Encoding ASCII '%s'", base64.StdEncoding.EncodeToString(body), remoteFile)
-	fmt.Println(saveCmd)
 	return saveCmd, nil
 }
 
