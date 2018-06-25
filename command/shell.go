@@ -105,8 +105,8 @@ func (command *ShellCommand) Execute([]string) error {
 		} else if cmd == "exit" {
 			return nil
 		} else if strings.HasPrefix(cmd, "edit ") {
-			editCmd := "Get-Content " + cmd[5:]
-			processFile = cmd[5:]
+			processFile = cmd[5:] //TODO: Check input
+			editCmd := fmt.Sprintf("[System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([System.IO.File]::ReadAllText('%s')))", processFile)
 			commandID, err = m.RunCommand(targets, shellDocument, map[string]string{"commands": editCmd })
 			process = "edit"
 		} else{
@@ -161,7 +161,12 @@ func processOutput(processFile string, output *manager.CommandOutput, process st
 }
 
 func editCommand(processFile string, output *manager.CommandOutput) (string, error) {
-	fileContent := output.Output
+	b64String, err := base64.StdEncoding.DecodeString(output.Output)
+	if err != nil {
+		return "", errors.Wrap(err, "b64 decode failed")
+	}
+	fileContent := string(b64String[:])
+	fmt.Println(fileContent)
 	if strings.HasSuffix(fileContent, "--output truncated--") {
 		return "", errors.New("output truncated, file is too large to edit")
 	}
@@ -210,6 +215,7 @@ func createTempfile(fileName string, body []byte) (string, error) {
 func editFile(path string) error{
 	command := getDefaultEditor() + " " + path
 
+	fmt.Sprintf("running","sh", "-c", command)
 	cmd := exec.Command("sh", "-c", command)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
@@ -222,5 +228,8 @@ func editFile(path string) error{
 }
 
 func getDefaultEditor() string {
+	if os.Getenv("EDITOR") == "" {
+		return "/usr/bin/vi"
+	}
 	return os.Getenv("EDITOR")
 }
