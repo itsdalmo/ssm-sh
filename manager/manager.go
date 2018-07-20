@@ -63,7 +63,10 @@ type Opts struct {
 
 // NewManager creates a new Manager from an AWS session and region.
 func NewManager(sess *session.Session, region string, opts Opts) *Manager {
-	awsCfg := &aws.Config{Region: aws.String(region)}
+	awsCfg := &aws.Config{}
+	if region != "" {
+		awsCfg.Region = aws.String(region)
+	}
 	m := &Manager{
 		ssmClient: ssm.New(sess, awsCfg),
 		s3Client:  s3.New(sess, awsCfg),

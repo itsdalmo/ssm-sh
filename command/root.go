@@ -27,7 +27,7 @@ type DescribeCommand struct {
 
 type AwsOptions struct {
 	Profile string `short:"p" long:"profile" description:"AWS Profile to use. (If you are not using Vaulted)."`
-	Region  string `short:"r" long:"region" description:"Region to target." default:"eu-west-1"`
+	Region  string `short:"r" long:"region" description:"Region to target."`
 }
 
 type TargetOptions struct {
