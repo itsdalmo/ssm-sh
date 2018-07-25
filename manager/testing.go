@@ -3,16 +3,19 @@ package manager
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"strings"
+	"sync"
+
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
-	"io/ioutil"
-	"strings"
-	"sync"
 )
 
 type MockEC2 struct {
@@ -309,6 +312,10 @@ func (mock *MockSSM) GetCommandInvocation(input *ssm.GetCommandInvocationInput) 
 		StatusDetails:         aws.String(cmd.Status),
 		StandardOutputContent: aws.String("example standard output"),
 		StandardErrorContent:  aws.String("example standard error"),
+		CloudWatchOutputConfig: &ssm.CloudWatchOutputConfig{
+			CloudWatchLogGroupName:  aws.String("loggroup_example"),
+			CloudWatchOutputEnabled: aws.Bool(true),
+		},
 	}, nil
 }
 
@@ -330,5 +337,40 @@ func (mock *MockS3) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, er
 
 	return &s3.GetObjectOutput{
 		Body: ioutil.NopCloser(strings.NewReader("example s3 output")),
+	}, nil
+}
+
+type MockCWL struct {
+	cloudwatchlogsiface.CloudWatchLogsAPI
+	Error bool
+}
+
+func (mock *MockCWL) GetLogEvents(input *cloudwatchlogs.GetLogEventsInput) (*cloudwatchlogs.GetLogEventsOutput, error) {
+	if mock.Error {
+		return nil, errors.New("Expected")
+	}
+	if input.LogGroupName == nil {
+		return nil, errors.New("Missing log group name")
+	}
+	if input.LogStreamName == nil {
+		return nil, errors.New("Missing log stream name")
+	}
+	return &cloudwatchlogs.GetLogEventsOutput{
+		Events: []*cloudwatchlogs.OutputLogEvent{{Message: aws.String("Example of cloudwatch logs output")}},
+	}, nil
+}
+
+func (mock *MockCWL) DescribeLogStreams(input *cloudwatchlogs.DescribeLogStreamsInput) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
+	if mock.Error {
+		return nil, errors.New("Expected")
+	}
+	if input.LogGroupName == nil {
+		return nil, errors.New("Missing log group name")
+	}
+	if input.LogStreamNamePrefix == nil {
+		return nil, errors.New("Missing log stream name prefix")
+	}
+	return &cloudwatchlogs.DescribeLogStreamsOutput{
+		LogStreams: []*cloudwatchlogs.LogStream{{LogStreamName: aws.String("example of logstreame")}},
 	}, nil
 }

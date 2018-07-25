@@ -12,6 +12,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -41,6 +43,8 @@ type CommandOutput struct {
 	Status     string
 	Output     string
 	OutputUrl  string
+	CwlStream  string
+	CwlGroup   string
 	Error      error
 }
 
@@ -49,16 +53,19 @@ type Manager struct {
 	ssmClient    ssmiface.SSMAPI
 	s3Client     s3iface.S3API
 	ec2Client    ec2iface.EC2API
+	cwlClient    cloudwatchlogsiface.CloudWatchLogsAPI
 	extendOutput bool
 	region       string
 	s3Bucket     string
 	s3KeyPrefix  string
+	logGroupName string
 }
 
 type Opts struct {
 	ExtendOutput bool
 	S3Bucket     string
 	S3KeyPrefix  string
+	LogGroupName string
 }
 
 // NewManager creates a new Manager from an AWS session and region.
@@ -71,21 +78,25 @@ func NewManager(sess *session.Session, region string, opts Opts) *Manager {
 		ssmClient: ssm.New(sess, awsCfg),
 		s3Client:  s3.New(sess, awsCfg),
 		ec2Client: ec2.New(sess, awsCfg),
+		cwlClient: cloudwatchlogs.New(sess, awsCfg),
 		region:    region,
 	}
 	m.extendOutput = opts.ExtendOutput
 	m.s3Bucket = opts.S3Bucket
 	m.s3KeyPrefix = opts.S3KeyPrefix
+	m.logGroupName = opts.LogGroupName
 	return m
 }
 
 // NewTestManager creates a new manager for testing purposes.
-func NewTestManager(ssm ssmiface.SSMAPI, s3 s3iface.S3API, ec2 ec2iface.EC2API) *Manager {
+func NewTestManager(ssm ssmiface.SSMAPI, s3 s3iface.S3API, ec2 ec2iface.EC2API, cwl cloudwatchlogsiface.CloudWatchLogsAPI) *Manager {
 	return &Manager{
 		ssmClient: ssm,
 		s3Client:  s3,
 		ec2Client: ec2,
-		region:    "eu-west-1",
+		cwlClient: cwl,
+
+		region: "eu-west-1",
 	}
 }
 
@@ -231,6 +242,13 @@ func (m *Manager) RunCommand(instanceIds []string, name string, parameters map[s
 	if m.s3Bucket != "" {
 		input.OutputS3BucketName = aws.String(m.s3Bucket)
 	}
+
+	if m.logGroupName != "" {
+		input.CloudWatchOutputConfig = &ssm.CloudWatchOutputConfig{
+			CloudWatchLogGroupName:  aws.String(m.logGroupName),
+			CloudWatchOutputEnabled: aws.Bool(true),
+		}
+	}
 	if m.s3KeyPrefix != "" {
 		input.OutputS3KeyPrefix = aws.String(m.s3KeyPrefix)
 	}
@@ -238,7 +256,6 @@ func (m *Manager) RunCommand(instanceIds []string, name string, parameters map[s
 	if err != nil {
 		return "", err
 	}
-
 	return aws.StringValue(res.Command.CommandId), nil
 }
 
@@ -300,7 +317,6 @@ func (m *Manager) newCommandOutput(result *ssm.GetCommandInvocationOutput, err e
 		Output:     "",
 		Error:      err,
 	}
-
 	if err != nil {
 		return out, true
 	}
@@ -314,6 +330,10 @@ func (m *Manager) newCommandOutput(result *ssm.GetCommandInvocationOutput, err e
 	case "Success":
 		out.Output = aws.StringValue(result.StandardOutputContent)
 		out.OutputUrl = aws.StringValue(result.StandardOutputUrl)
+		out.CwlGroup = aws.StringValue(result.CloudWatchOutputConfig.CloudWatchLogGroupName)
+		if out.CwlGroup != "" {
+			out.CwlStream, err = m.getCwlStream(out.CwlGroup, aws.StringValue(result.CommandId), aws.StringValue(result.InstanceId))
+		}
 		if m.extendOutput {
 			return m.extendTruncatedOutput(*out), true
 		}
@@ -321,6 +341,11 @@ func (m *Manager) newCommandOutput(result *ssm.GetCommandInvocationOutput, err e
 	case "Failed":
 		out.Output = aws.StringValue(result.StandardErrorContent)
 		out.OutputUrl = aws.StringValue(result.StandardErrorUrl)
+		out.CwlGroup = aws.StringValue(result.CloudWatchOutputConfig.CloudWatchLogGroupName)
+		if out.CwlGroup != "" {
+			out.CwlStream, err = m.getCwlStream(out.CwlGroup, aws.StringValue(result.CommandId), aws.StringValue(result.InstanceId))
+		}
+
 		if m.extendOutput {
 			return m.extendTruncatedOutput(*out), true
 		}
@@ -334,12 +359,21 @@ func (m *Manager) newCommandOutput(result *ssm.GetCommandInvocationOutput, err e
 func (m *Manager) extendTruncatedOutput(out CommandOutput) *CommandOutput {
 	const truncationMarker = "--output truncated--"
 	if strings.Contains(out.Output, truncationMarker) {
-		s3out, err := m.readOutput(out.OutputUrl)
-		if err != nil {
-			out.Error = errors.Wrap(err, "failed to fetch extended output")
+		if out.OutputUrl != "" {
+			s3out, err := m.readOutput(out.OutputUrl)
+			if err != nil {
+				out.Error = errors.Wrap(err, "failed to fetch extended output from s3 bucket")
+			}
+			out.Output = s3out
+		} else if out.CwlGroup != "" {
+
+			cwlout, err := m.readCwl(out.CwlGroup, out.CwlStream)
+			if err != nil {
+				out.Error = errors.Wrap(err, "failed to fetch extended output from cloudwatchlogs")
+			}
+			out.Output = cwlout
+
 		}
-		out.Output = s3out
-		return &out
 	}
 	return &out
 }
@@ -375,4 +409,34 @@ func (m *Manager) readS3Object(bucket, key string) (string, error) {
 		return "", err
 	}
 	return b.String(), nil
+}
+
+func (m *Manager) getCwlStream(group, commandId, instanceId string) (string, error) {
+	cwls, err := m.cwlClient.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+		LogGroupName:        aws.String(group),
+		LogStreamNamePrefix: aws.String(commandId + "/" + instanceId),
+	})
+	if err != nil {
+		return "", err
+	}
+	if len(cwls.LogStreams) > 1 {
+		return "", errors.Errorf("Find multiple logstream for %s - %s", commandId, instanceId)
+	}
+	return aws.StringValue(cwls.LogStreams[0].LogStreamName), nil
+}
+
+func (m *Manager) readCwl(group, stream string) (string, error) {
+	output, err := m.cwlClient.GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
+		LogGroupName:  aws.String(group),
+		LogStreamName: aws.String(stream),
+	})
+
+	if err != nil {
+		return "", err
+	}
+	message := ""
+	for _, m := range output.Events {
+		message += aws.StringValue(m.Message)
+	}
+	return message, nil
 }

@@ -100,9 +100,11 @@ $ ssm-sh run cmd --help
           --target-file=   Path to a JSON file containing a list of targets.
 
     SSM options:
-      -x, --extend-output  Extend truncated command outputs by fetching S3 objects containing full ones
-      -b, --s3-bucket=     S3 bucket in which S3 objects containing full command outputs are stored. Required when --extend-output is provided.
-      -k, --s3-key-prefix= Key prefix of S3 objects containing full command outputs.
+      -x, --extend-output   Extend truncated command outputs by fetching S3 objects or cloudwatch logs containing full ones
+      -b, --s3-bucket=      S3 bucket in which S3 objects containing full command outputs are stored. Required when --extend-output is provided.
+      -k, --s3-key-prefix=  Key prefix of S3 objects containing full command outputs.
+      -l, --log-group-name= Log group name to store ssm run command outputs.
+```
 ```
 
 #### Run document usage
@@ -119,9 +121,10 @@ $ ssm-sh run document --help
           --target-file=   Path to a JSON file containing a list of targets.
 
     SSM options:
-      -x, --extend-output  Extend truncated command outputs by fetching S3 objects containing full ones
-      -b, --s3-bucket=     S3 bucket in which S3 objects containing full command outputs are stored. Required when --extend-output is provided.
-      -k, --s3-key-prefix= Key prefix of S3 objects containing full command outputs.
+      -x, --extend-output   Extend truncated command outputs by fetching S3 objects or cloudwatch logs containing full ones
+      -b, --s3-bucket=      S3 bucket in which S3 objects containing full command outputs are stored. Required when --extend-output is provided.
+      -k, --s3-key-prefix=  Key prefix of S3 objects containing full command outputs.
+      -l, --log-group-name= Log group name to store ssm run command outputs.
 ```
 
 ## Example
