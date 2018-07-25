@@ -2,13 +2,14 @@ package manager_test
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/itsdalmo/ssm-sh/manager"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 var (
@@ -192,8 +193,10 @@ func TestList(t *testing.T) {
 		Error:     false,
 		Instances: ec2Instances,
 	}
-
-	m := manager.NewTestManager(ssmMock, s3Mock, ec2Mock)
+	cwlMock := &manager.MockCWL{
+		Error: false,
+	}
+	m := manager.NewTestManager(ssmMock, s3Mock, ec2Mock, cwlMock)
 
 	t.Run("Get managed instances works", func(t *testing.T) {
 		expected := outputInstances
@@ -264,7 +267,7 @@ func TestListDocumentsCommand(t *testing.T) {
 		Documents: ssmDocumentIdentifiers,
 	}
 
-	m := manager.NewTestManager(ssmMock, nil, nil)
+	m := manager.NewTestManager(ssmMock, nil, nil, nil)
 
 	t.Run("List documents works", func(t *testing.T) {
 		expected := outputDocumentIdentifiers
@@ -333,7 +336,7 @@ func TestDescribeDocumentsCommand(t *testing.T) {
 		DocumentDescription: ssmDocumentDescription,
 	}
 
-	m := manager.NewTestManager(ssmMock, nil, nil)
+	m := manager.NewTestManager(ssmMock, nil, nil, nil)
 
 	t.Run("Describe documents works", func(t *testing.T) {
 		expected := outputDocumentDescription
@@ -373,8 +376,11 @@ func TestRunCommand(t *testing.T) {
 		Error:     false,
 		Instances: ec2Instances,
 	}
+	cwlMock := &manager.MockCWL{
+		Error: false,
+	}
 
-	m := manager.NewTestManager(ssmMock, s3Mock, ec2Mock)
+	m := manager.NewTestManager(ssmMock, s3Mock, ec2Mock, cwlMock)
 
 	var targets []string
 	for _, instance := range ssmMock.Instances {
@@ -420,8 +426,10 @@ func TestAbortCommand(t *testing.T) {
 		Error:     false,
 		Instances: ec2Instances,
 	}
-
-	m := manager.NewTestManager(ssmMock, s3Mock, ec2Mock)
+	cwlMock := &manager.MockCWL{
+		Error: false,
+	}
+	m := manager.NewTestManager(ssmMock, s3Mock, ec2Mock, cwlMock)
 
 	var targets []string
 	for _, instance := range ssmMock.Instances {
@@ -473,8 +481,10 @@ func TestOutput(t *testing.T) {
 		Error:     false,
 		Instances: ec2Instances,
 	}
-
-	m := manager.NewTestManager(ssmMock, s3Mock, ec2Mock)
+	cwlMock := &manager.MockCWL{
+		Error: false,
+	}
+	m := manager.NewTestManager(ssmMock, s3Mock, ec2Mock, cwlMock)
 
 	var targets []string
 	for _, instance := range ssmMock.Instances {
