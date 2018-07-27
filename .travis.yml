@@ -27,7 +27,6 @@ matrix:
 notifications:
   email: false
 script:
-- dep ensure
 - make build-release
 deploy:
   provider: releases
