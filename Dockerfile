@@ -7,6 +7,7 @@ ENV ARCH amd64
 RUN make build-release
 
 FROM alpine
-COPY --from=builder /go/src/github.com/itsdalmo/ssm-sh/ssm-sh-linux-amd64 /bin/ssm-sh
+RUN apk --no-cache add ca-certificates
 ENTRYPOINT ["/bin/ssm-sh"]
 CMD ["--help"]
+COPY --from=builder /go/src/github.com/itsdalmo/ssm-sh/ssm-sh-linux-amd64 /bin/ssm-sh
