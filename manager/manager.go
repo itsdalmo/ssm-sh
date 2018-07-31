@@ -369,7 +369,7 @@ func (m *Manager) extendTruncatedOutput(out CommandOutput) *CommandOutput {
 
 			cwlout, err := m.readCwl(out.CwlGroup, out.CwlStream)
 			if err != nil {
-				out.Error = errors.Wrap(err, "failed to fetch extended output from cloudwatchlogs")
+				out.Error = errors.Wrap(err, "failed to fetch extended output from cloudwatch logs")
 			}
 			out.Output = cwlout
 
@@ -420,7 +420,10 @@ func (m *Manager) getCwlStream(group, commandId, instanceId string) (string, err
 		return "", err
 	}
 	if len(cwls.LogStreams) > 1 {
-		return "", errors.Errorf("Find multiple logstream for %s - %s", commandId, instanceId)
+		return "", errors.Errorf("found multiple log stream with prefix %s/%s in %s log group\n", commandId, instanceId, group)
+	}
+	if len(cwls.LogStreams) < 1 {
+		return "", errors.Errorf("can't find log stream with prefix %s/%s in %s log group\n", commandId, instanceId, group)
 	}
 	return aws.StringValue(cwls.LogStreams[0].LogStreamName), nil
 }
