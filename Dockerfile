@@ -5,7 +5,6 @@ WORKDIR /go/src/github.com/itsdalmo/ssm-sh
 ARG TARGET=linux
 ARG ARCH=amd64
 ARG CACHE_TAG
-ENV CACHE_TAG ${CACHE_TAG}
 RUN make build-release
 
 FROM alpine:latest as resource
