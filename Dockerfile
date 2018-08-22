@@ -1,5 +1,4 @@
 FROM golang:1.10 as builder
-MAINTAINER itsdalmo
 
 ADD . /go/src/github.com/itsdalmo/ssm-sh
 WORKDIR /go/src/github.com/itsdalmo/ssm-sh
