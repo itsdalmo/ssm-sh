@@ -1,14 +1,11 @@
-BINARY_NAME = ssm-sh
-DOCKER_REPO = itsdalmo/ssm-sh
-TARGET     ?= darwin
-ARCH       ?= amd64
-EXT        ?= ""
-
-GIT_REF = $(shell git rev-parse --short HEAD)
-GIT_TAG = $(if $(TRAVIS_TAG),$(TRAVIS_TAG),$(if $(CACHE_TAG),$(CACHE_TAG),ref-$(GIT_REF)))
-
-LDFLAGS = -ldflags "-X=main.version=$(GIT_TAG)"
-SRC     = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+BINARY_NAME=ssm-sh
+TARGET ?= darwin
+ARCH ?= amd64
+EXT ?= ""
+DOCKER_REPO=itsdalmo/ssm-sh
+TRAVIS_TAG ?= ref-$(shell git rev-parse --short HEAD)
+LDFLAGS=-ldflags "-X=main.version=$(TRAVIS_TAG)"
+SRC=$(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 default: test
 
@@ -28,7 +25,7 @@ test:
 
 clean:
 	@echo "== Cleaning =="
-	@rm -f ssm-sh* || true
+	rm ssm-sh*
 
 lint:
 	@echo "== Lint =="
@@ -41,7 +38,7 @@ run-docker:
 
 build-docker:
 	@echo "== Docker build =="
-	docker build --build-arg CACHE_TAG=$(GIT_TAG) -t $(DOCKER_REPO):latest .
+	docker build -t $(DOCKER_REPO):latest .
 
 build-release: test
 	@echo "== Release build =="
