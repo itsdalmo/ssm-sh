@@ -5,7 +5,7 @@ ARCH       ?= amd64
 EXT        ?= ""
 
 GIT_REF = $(shell git rev-parse --short HEAD)
-GIT_TAG = $(if $(TRAVIS_TAG),$(TRAVIS_TAG),$(if $(CACHE_TAG),$(CACHE_TAG),ref-$(GIT_REF)))
+GIT_TAG = $(if $(TRAVIS_TAG),$(TRAVIS_TAG),ref-$(GIT_REF))
 
 LDFLAGS = -ldflags "-X=main.version=$(GIT_TAG)"
 SRC     = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
@@ -41,7 +41,7 @@ run-docker:
 
 build-docker:
 	@echo "== Docker build =="
-	docker build --build-arg CACHE_TAG=$(GIT_TAG) -t $(DOCKER_REPO):latest .
+	docker build -t $(DOCKER_REPO):latest .
 
 build-release: test
 	@echo "== Release build =="

@@ -4,7 +4,6 @@ ADD . /go/src/github.com/itsdalmo/ssm-sh
 WORKDIR /go/src/github.com/itsdalmo/ssm-sh
 ARG TARGET=linux
 ARG ARCH=amd64
-ARG CACHE_TAG
 RUN make build-release
 
 FROM alpine:latest as resource
