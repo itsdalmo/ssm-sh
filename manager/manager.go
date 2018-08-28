@@ -327,28 +327,40 @@ func (m *Manager) newCommandOutput(result *ssm.GetCommandInvocationOutput, err e
 	case "Cancelled":
 		out.Output = "Command was cancelled"
 		return out, true
+
 	case "Success":
 		out.Output = aws.StringValue(result.StandardOutputContent)
 		out.OutputUrl = aws.StringValue(result.StandardOutputUrl)
 		out.CwlGroup = aws.StringValue(result.CloudWatchOutputConfig.CloudWatchLogGroupName)
 		if out.CwlGroup != "" {
 			out.CwlStream, err = m.getCwlStream(out.CwlGroup, aws.StringValue(result.CommandId), aws.StringValue(result.InstanceId))
+			if err != nil {
+				out.Error = err
+				return out, true
+			}
 		}
 		if m.extendOutput {
 			return m.extendTruncatedOutput(*out), true
 		}
+
 		return out, true
+
 	case "Failed":
 		out.Output = aws.StringValue(result.StandardErrorContent)
 		out.OutputUrl = aws.StringValue(result.StandardErrorUrl)
 		out.CwlGroup = aws.StringValue(result.CloudWatchOutputConfig.CloudWatchLogGroupName)
 		if out.CwlGroup != "" {
 			out.CwlStream, err = m.getCwlStream(out.CwlGroup, aws.StringValue(result.CommandId), aws.StringValue(result.InstanceId))
+			if err != nil {
+				out.Error = err
+				return out, true
+			}
 		}
 
 		if m.extendOutput {
 			return m.extendTruncatedOutput(*out), true
 		}
+
 		return out, true
 	default:
 		out.Error = fmt.Errorf("Unrecoverable status: %s", out.Status)
@@ -366,13 +378,11 @@ func (m *Manager) extendTruncatedOutput(out CommandOutput) *CommandOutput {
 			}
 			out.Output = s3out
 		} else if out.CwlGroup != "" {
-
 			cwlout, err := m.readCwl(out.CwlGroup, out.CwlStream)
 			if err != nil {
 				out.Error = errors.Wrap(err, "failed to fetch extended output from cloudwatch logs")
 			}
 			out.Output = cwlout
-
 		}
 	}
 	return &out
