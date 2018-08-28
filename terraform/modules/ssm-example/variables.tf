@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # Variables
 # ------------------------------------------------------------------------------
-variable "prefix" {
+variable "name_prefix" {
   description = "Prefix used for resource names."
 }
 
@@ -14,8 +14,12 @@ variable "subnet_ids" {
   type        = "list"
 }
 
-variable "ssm_output_bucket" {
+variable "output_bucket" {
   description = "Name of the bucket to which instance should be allowed to write command outputs."
+}
+
+variable "output_log_group" {
+  description = "Name of the CloudWatch log group to which instance should be allowed to write command outputs."
 }
 
 variable "instance_count" {
