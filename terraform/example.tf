@@ -58,3 +58,11 @@ module "ssm-example" {
     terraform   = "True"
   }
 }
+
+output "output_bucket" {
+  value = "${module.ssm-example.output_bucket}"
+}
+
+output "output_log_group" {
+  value = "${module.ssm-example.output_log_group}"
+}
