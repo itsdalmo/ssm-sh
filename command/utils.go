@@ -108,8 +108,8 @@ func PrintCommandOutput(wrt io.Writer, output *manager.CommandOutput) error {
 		if _, err := fmt.Fprintf(wrt, "(Output URL: %s)\n", output.OutputUrl); err != nil {
 			return err
 		}
-	} else if output.CwlGroup != "" {
-		if _, err := fmt.Fprintf(wrt, "Output cloudwatch logs in %s log group, %s log stream\n", output.CwlGroup, output.CwlStream); err != nil {
+	} else if output.CwlGroup != "" && output.CwlStream != "" {
+		if _, err := fmt.Fprintf(wrt, "Output to cloudwatch logs in %s log group %s log stream\n", output.CwlGroup, output.CwlStream); err != nil {
 			return err
 		}
 	}
