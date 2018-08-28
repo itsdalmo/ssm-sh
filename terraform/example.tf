@@ -53,9 +53,6 @@ module "ssm-example" {
   instance_count = "1"
   instance_type  = "t3.micro"
 
-  output_bucket    = "<bucket-name>"
-  output_log_group = "<log-group-name>"
-
   tags = {
     environment = "dev"
     terraform   = "True"

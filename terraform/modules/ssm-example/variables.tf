@@ -14,14 +14,6 @@ variable "subnet_ids" {
   type        = "list"
 }
 
-variable "output_bucket" {
-  description = "Name of the bucket to which instance should be allowed to write command outputs."
-}
-
-variable "output_log_group" {
-  description = "Name of the CloudWatch log group to which instance should be allowed to write command outputs."
-}
-
 variable "instance_count" {
   description = "Desired (and minimum) number of instances."
   default     = "1"

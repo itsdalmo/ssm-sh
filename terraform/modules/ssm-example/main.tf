@@ -3,6 +3,19 @@
 # -------------------------------------------------------------------------------
 data "aws_region" "current" {}
 
+data "aws_caller_identity" "current" {}
+
+resource "aws_cloudwatch_log_group" "output" {
+  name = "${var.name_prefix}-output-${data.aws_caller_identity.current.account_id}"
+}
+
+resource "aws_s3_bucket" "output" {
+  bucket = "${var.name_prefix}-output-${data.aws_caller_identity.current.account_id}"
+  acl    = "private"
+
+  tags = "${merge(var.tags, map("Name", "${var.name_prefix}-output-${data.aws_caller_identity.current.account_id}"))}"
+}
+
 resource "aws_cloudwatch_log_group" "main" {
   name = "${var.name_prefix}-ssm-agent"
 }
@@ -99,7 +112,7 @@ data "aws_iam_policy_document" "permissions" {
 
     resources = [
       "${aws_cloudwatch_log_group.main.arn}",
-      "${var.output_log_group}",
+      "${aws_cloudwatch_log_group.output.arn}",
     ]
 
     actions = [
@@ -122,8 +135,8 @@ data "aws_iam_policy_document" "permissions" {
     ]
 
     resources = [
-      "arn:aws:s3:::${var.output_bucket}/*",
-      "arn:aws:s3:::${var.output_bucket}",
+      "${aws_s3_bucket.output.arn}/*",
+      "${aws_s3_bucket.output.arn}",
     ]
   }
 }
