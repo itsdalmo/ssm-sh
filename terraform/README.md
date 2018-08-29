@@ -20,5 +20,9 @@ terraform apply
 If everything deploys successfully, you should see your instances listed when
 running: `ssm-sh list`.
 
+This terraform will create a managed policy `ssm-cwl-policy` to access cloudwatch logs, 
+please attach `ssm-cwl-policy` to your user or roles, if you are sending output to cloudwatch logs 
+but don't have the the right permission yet.
+
 Terraform state will be stored locally unless you add a remote backend to `main.tf`,
 and when you are done testing you can tear everything down with `terraform destroy`.
