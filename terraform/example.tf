@@ -66,3 +66,26 @@ output "output_bucket" {
 output "output_log_group" {
   value = "${module.ssm-example.output_log_group}"
 }
+
+data "aws_iam_policy_document" "ssm-cwl" {
+  statement = {
+    effect = "Allow"
+    sid    = "AllowAccessCloudWatchLogStream"
+
+    actions = [
+      "logs:DescribeLogStream",
+      "logs:GetLogEvents",
+      "logs:DescribeLogGroup",
+    ]
+
+    resources = [
+      "*", #can replace with arn loggroups
+    ]
+  }
+}
+
+resource "aws_iam_policy" "ssm-cwl-policy" {
+  name        = "ssm-cwl-policy"
+  description = "policy to access cloudwatch logstreams"
+  policy      = "${data.aws_iam_policy_document.ssm-cwl.json}"
+}
