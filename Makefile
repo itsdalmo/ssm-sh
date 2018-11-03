@@ -10,6 +10,8 @@ GIT_TAG = $(if $(TRAVIS_TAG),$(TRAVIS_TAG),ref-$(GIT_REF))
 LDFLAGS = -ldflags "-X=main.version=$(GIT_TAG)"
 SRC     = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
+export GO111MODULE=on
+
 default: test
 
 run: test
