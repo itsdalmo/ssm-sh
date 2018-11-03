@@ -1,4 +1,4 @@
-FROM golang:1.10 as builder
+FROM golang:1.11 as builder
 
 ADD . /go/src/github.com/itsdalmo/ssm-sh
 WORKDIR /go/src/github.com/itsdalmo/ssm-sh
