@@ -9,17 +9,17 @@ env:
 matrix:
   include:
   - os: osx
-    go: 1.11.x
+    go: 1.13.x
     env:
       - TARGET=darwin
       - ARCH=amd64
   - os: linux
-    go: 1.11.x
+    go: 1.13.x
     env:
       - TARGET=linux
       - ARCH=amd64
   - os: linux
-    go: 1.11.x
+    go: 1.13.x
     env:
       - TARGET=windows
       - ARCH=amd64
